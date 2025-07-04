@@ -1,0 +1,39 @@
+*** a/boltz_analysis.py
+--- b/boltz_analysis.py
+@@
+-from pathlib import Path
+-import pandas as pd, json, itertools
++from pathlib import Path
++import pandas as pd, json, itertools
+ 
+-ROOT = Path(__file__).resolve().parent
++ROOT = Path(__file__).resolve().parent
++RUNS = (ROOT / "results").glob("*_*")          # 001_UAP56_NTD_Q92979, …
+ 
+-def find_predictions(run_dir: Path):
+-    """Old helper that looked *inside* boltz_results_*/predictions/*/* ."""
+-    predictions_root = next(run_dir.glob("boltz_results_*")) / "predictions"
+-    targ_dir         = next(predictions_root.iterdir())          # only one
+-    return list(targ_dir.glob("*.cif"))
++def find_predictions(run_dir: Path):
++    """New helper – predictions sit directly under results/<run>/predictions/<run>."""
++    targ_dir = run_dir / "predictions" / run_dir.name
++    return list(targ_dir.glob("*.cif"))
+ 
+ def harvest_metrics():
+     rows = []
+-    for run_dir in ROOT.glob("*_*"):
+-        preds = find_predictions(run_dir)
++    for run_dir in RUNS:
++        preds = find_predictions(run_dir)
+         for cif in preds:
+             name = cif.stem.replace("_model_0", "")
+             json_conf = cif.with_name(f"confidence_{name}_model_0.json")
+             pae_npz   = cif.with_name(f"pae_{name}_model_0.npz")
+@@
+-if __name__ == "__main__":
+-    df = harvest_metrics()
+-    df.to_csv(ROOT / "summary_metrics.csv", index=False)
++if __name__ == "__main__":
++    df = harvest_metrics()
++    df.to_csv(ROOT / "summary_metrics.csv", index=False)
