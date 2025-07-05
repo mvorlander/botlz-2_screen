@@ -153,9 +153,33 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from datetime import datetime
 
-# --------------------------------------------------------------------------- #
+
+# ------------------------------------------------------------------
+# Absolute directory where this wrapper script resides.
+# Lets us reference boltz_analysis.py regardless of CWD.
+# ------------------------------------------------------------------
+WRAPPER_DIR = pathlib.Path(__file__).resolve().parent# 
+#--------------------------------------------------------------------------- #
 # Helpers                                                                     #
 # --------------------------------------------------------------------------- #
+
+# ------------------------------------------------------------------
+# Cluster GPU inventory (Plaschka lab, July 2025)
+# ------------------------------------------------------------------
+# key  = Slurm --constraint value
+# cap  = usable VRAM in **GB** (before safety deduction)
+#   g1 = P100‑12 GB     g2 = V100‑32 GB
+#   g3 = RTX 6000‑24 GB g4 = A100‑40 GB
+_GPU_CAPACITY = {
+    "g1": 12,
+    "g3": 24,
+    "g2": 32,
+    "g4": 40,
+}
+# Small safety cushion so borderline cases are skipped instead of OOMing
+_SAFETY_MARGIN_GB = 2      # e.g. 40‑2 = 38 GB max for A100‑40 GB
+
+
 # --------------------------------------------------------------------------- #
 # FASTA validation helper                                                     #
 # --------------------------------------------------------------------------- #
@@ -172,6 +196,8 @@ def _validate_fasta(path: pathlib.Path) -> None:
     """
     if not path.is_file():
         sys.exit(f"❌ FASTA file not found: {path}")
+        
+        
     with path.open() as fh:
         for ln in fh:
             if ln.strip():                     # first non-empty line
@@ -258,78 +284,65 @@ def yaml_stats(yaml_path: pathlib.Path) -> dict[str, int]:
 # --------------------------------------------------------------------------- #
 
 def gpu_and_flags(residues: int, chains: int, ligands: int, mods: int):
-    """Return (constraint, mem_string, extra_flags).
-
-    * **constraint**  – Slurm `--constraint` string selecting GPU class
-      (`g2` ≈ A40‑32 GB, `g3` ≈ A100‑40 GB, `g4` ≈ H100‑80 GB).
-    * **mem_string** – host RAM to reserve, as `'123000M'`.
-    * **extra_flags** – list of boltz‑predict options to control memory
-      (e.g. lower sampling steps, `--no_kernels`, etc.).
     """
+    Return
+       (constraint_str, host_mem_string, extra_flags_list, est_vram_gb)
 
-    # ---------- start with adaptive extra‑flags -----------------------------
+    • If the job is too big for the largest GPU we have, *constraint_str*
+      is **None** – the caller can skip it.
+    """
+    # ---------- adaptive Boltz flags -----------------------------------
     flags: list[str] = []
-
-    # Fewer sampling steps for very large systems
     if residues >= 2500 or chains >= 6:
         flags += ["--sampling_steps", "40"]
     elif residues >= 1800 or chains >= 4:
         flags += ["--sampling_steps", "60"]
-
-    # Ligand‑rich complexes tend to use more VRAM with kernels; disabling
-    # kernels saves ~15 % memory at the cost of speed.
     if ligands:
         flags += ["--no_kernels"]
-
-    # Lots of PTMs → reduce recycles (each recycle duplicates activations)
     if mods >= 20:
         flags += ["--recycles", "1"]
 
-    # Helper: fetch parameter value if we added it above (else default)
+    # helpers to read our own override back
     def _par(opt: str, default: int) -> int:
         try:
-            idx = flags.index(opt)
-            return int(flags[idx + 1])
+            return int(flags[flags.index(opt) + 1])
         except ValueError:
             return default
-
-    steps   = _par("--sampling_steps", 100)
+    steps    = _par("--sampling_steps", 100)
     recycles = _par("--recycles", 3)
 
-    # ---------- very coarse VRAM model (empirical) --------------------------
-    # pair‑wise features dominate → O(N^2); ligands add constant overhead.
+    # ---------- crude VRAM estimator (good ±15 %) ----------------------
     est_vram_gb = (
-        0.0000035 * residues ** 2      # pair features
-        + 0.015 * residues             # single‑residue features
-        + 0.5 * ligands                # each CCD adds pseudo‑residues
-        + 2                             # model & misc tensors
+        0.0000035 * residues ** 2 +
+        0.015 * residues +
+        0.5 * ligands +
+        2
     ) * (steps / 100) * (recycles / 3)
 
-    # ---------- choose GPU class & host memory -----------------------------
-    # Default to smallest possible – upscale if estimate exceeds capacity.
-    if est_vram_gb > 70 or residues > 3200:
-        gpu_class = "g4"   # H100‑80 GB
-        host_mem_gb = 160   # generous, but still below node limit
-    elif est_vram_gb > 40 or residues > 2000:
-        gpu_class = "g3"   # A100‑40 GB
-        host_mem_gb = 120
+    # ---------- pick smallest GPU that fits ---------------------------
+    if est_vram_gb <= _GPU_CAPACITY["g1"] - _SAFETY_MARGIN_GB:
+        gpu = "g1"; host_mem_gb = 70
+    elif est_vram_gb <= _GPU_CAPACITY["g3"] - _SAFETY_MARGIN_GB:
+        gpu = "g3"; host_mem_gb = 90
+    elif est_vram_gb <= _GPU_CAPACITY["g2"] - _SAFETY_MARGIN_GB:
+        gpu = "g2"; host_mem_gb = 120
+    elif est_vram_gb <= _GPU_CAPACITY["g4"] - _SAFETY_MARGIN_GB:
+        gpu = "g4"; host_mem_gb = 140
     else:
-        gpu_class = "g2"   # A40‑32 GB
-        host_mem_gb = 90
+        # would still OOM on A100‑40 → tell caller to skip
+        return None, None, None, est_vram_gb
 
-    # Fine‑tune host memory: add 0.02 GB per residue + 2 GB per ligand,
-    # then round up to the next 1000 MB so Slurm doesn’t reject odd sizes.
-    host_mem_gb = max(host_mem_gb, 4 + 0.02 * residues + 2 * ligands)
-    mem_mb = int((int(host_mem_gb) + 1) * 1000)  # round up
+    # round host RAM up to next 1000 MB
+    host_mem_mb = int((host_mem_gb + 1) * 1000)
 
     constraint_map = {
-        "g2": "g4|g2",
+        "g1": "g4|g2|g3|g1",
         "g3": "g4|g3",
+        "g2": "g4|g2",
         "g4": "g4",
     }
-
-    return constraint_map[gpu_class], f"{mem_mb}M", flags
-
+    return constraint_map[gpu], f"{host_mem_mb}M", flags, est_vram_gb
+    
 # --------------------------------------------------------------------------- #
 # Sequence classification helper                                              #
 # --------------------------------------------------------------------------- #
@@ -631,6 +644,8 @@ SLURM_TEMPLATE = """#!/bin/bash
 #SBATCH --mem=__MEM__
 
 set -euo pipefail
+export PYTORCH_MATMUL_PRECISION=medium
+export TORCH_MATMUL_ALLOW_TF32=1
 INPUT="$1"
 OUTDIR="$2"
 EXTRA="$3"
@@ -648,14 +663,24 @@ apptainer exec --nv \\
         --out_dir "$OUTDIR" \\
         --accelerator gpu \\
         --use_msa_server $EXTRA
+# ------------------------------------------------------------------
+# Flatten output – move boltz_results_* one level up
+# ------------------------------------------------------------------
+RES_SUB=$(find "$OUTDIR" -maxdepth 1 -type d -name "boltz_results_*" | head -n 1 || true)
+if [ -n "$RES_SUB" ]; then
+    shopt -s dotglob
+    mv "$RES_SUB"/* "$OUTDIR"/
+    rmdir "$RES_SUB"
+fi
+
 """
 
 # ---------- job‑array & analysis templates -------------------------------
 ARRAY_TEMPLATE = """#!/bin/bash
 #SBATCH --job-name={root}
 #SBATCH --array=1-{n}
-# (initial temporary log files in root – will be re‑directed below)
-#SBATCH --output={root}/array_%A_%a.tmp.out
+# (initial temporary log files in root/slurm – will be re‑directed below)
+#SBATCH --output={root}/slurm/array_%A_%a.tmp.out
 #SBATCH --time=01:00:00
 #SBATCH --partition=g
 #SBATCH --constraint=__CONSTRAINT__
@@ -663,7 +688,8 @@ ARRAY_TEMPLATE = """#!/bin/bash
 #SBATCH --mem={mem}
 
 set -euo pipefail
-
+export PYTORCH_MATMUL_PRECISION=medium
+export TORCH_MATMUL_ALLOW_TF32=1
 # ------------------------------------------------------------------
 # Re‑load line “SLURM_ARRAY_TASK_ID” from jobs.list and redirect logs
 # into the final per‑job directory so *.out/.err sit beside the YAML.
@@ -689,12 +715,22 @@ apptainer exec --nv --bind "$YAML:$YAML" \\
         --out_dir "$OUTDIR" \\
         --accelerator gpu \\
         --use_msa_server $FLAGS
+        
+# ------------------------------------------------------------------
+# Flatten output – move boltz_results_* one level up
+# ------------------------------------------------------------------
+RES_SUB=$(find "$OUTDIR" -maxdepth 1 -type d -name "boltz_results_*" | head -n 1 || true)
+if [ -n "$RES_SUB" ]; then
+    shopt -s dotglob
+    mv "$RES_SUB"/* "$OUTDIR"/
+    rmdir "$RES_SUB"
+fi        
 """
 
 ANALYSIS_TEMPLATE = """#!/bin/bash
 #SBATCH --job-name={root}_ana
-#SBATCH --output={root}/analysis_%j.out
-#SBATCH --error={root}/analysis_%j.err
+#SBATCH --output={root}/slurm/analysis_%j.out
+#SBATCH --error={root}/slurm/analysis_%j.err
 #SBATCH --partition=c
 #SBATCH --time=00:30:00
 #SBATCH --mem=4G
@@ -717,7 +753,7 @@ def write_slurm(job: str, yaml_path: pathlib.Path, outdir: pathlib.Path, flags: 
 
 # --------------------------------------------------------------------------- #
 # _parse_list helper                                                          #
-# --------------------------------------------------------------------------- #
+# ----------    ----------------------------------------------------------------- #
 def _parse_list(spec: str) -> list[str]:
     """
     Return a list of meaningful tokens extracted from *spec*.
@@ -859,6 +895,30 @@ def main():
         root_label  = args.screen_name or datetime.now().strftime("screen_%Y%m%d_%H%M%S")
         root_out    = pathlib.Path(args.out or f"boltz_{root_label}").resolve()
         root_out.mkdir(parents=True, exist_ok=True)
+
+        # --- unified layout ------------------------------------------------
+        inputs_dir  = root_out / "inputs"
+        results_dir = root_out / "results"
+        slurm_root  = root_out / "slurm"
+        for _d in (inputs_dir, results_dir, slurm_root):
+            _d.mkdir(parents=True, exist_ok=True)
+            
+        # Keep the raw input specs for provenance
+        def _cp_if_file(path_spec):
+            if not path_spec:
+                return
+            p = pathlib.Path(path_spec).expanduser()
+            if p.is_file():
+                try:
+                    shutil.copy2(p, inputs_dir / p.name)
+                except shutil.SameFileError:
+                    pass
+
+        _cp_if_file(args.bait)
+        _cp_if_file(args.screen)
+        _cp_if_file(args.chain_map)
+        
+                    
         print(f"📊  Screening {len(targets)} targets vs bait set ({len(bait_list)} entries)")
         jobs_list = []
         for idx, tgt in enumerate(targets, 1):
@@ -876,7 +936,7 @@ def main():
             else:
                 job_label = f"{index_str}_{bait_label}_{target_label}"
 
-            sub_out = root_out / job_label
+            sub_out = results_dir / job_label            
             sub_out.mkdir(parents=True, exist_ok=True)
 
             yaml_src = make_yaml(combined, [], chain_names)
@@ -884,8 +944,17 @@ def main():
             shutil.move(str(yaml_src), yaml_dst)
             print(f"🔄  YAML moved → {yaml_dst}")
             stats = yaml_stats(yaml_dst)
-            constraint, mem_req, auto_flags = gpu_and_flags(
+            constraint, mem_req, auto_flags, vram_est = gpu_and_flags(
                 stats["residues"], stats["chains"], stats["ligands"], stats["mods"])
+            # ---------- skip jobs that won’t fit on any GPU ----------
+            if constraint is None:                 # gpu_and_flags() could not place it
+                skipped_path = root_out / "skipped_jobs.txt"
+                skipped_path.open("a").write(
+                    f"{yaml_dst}\tneeds ≈{vram_est:.1f} GB VRAM (skip)\n")
+                print(f"⏭  SKIPPED – too large for any GPU: {job_label} "
+                    f"(≈{vram_est:.1f} GB VRAM)")
+                shutil.rmtree(sub_out, ignore_errors=True)   # clean up empty folder
+                continue
             flags = auto_flags[:]
             if args.no_kernels:
                 flags += ["--no_kernels"]
@@ -937,7 +1006,7 @@ def main():
         ana_script = ANALYSIS_TEMPLATE.format(
             root=str(root_out),
             array_id=array_id,
-            wrapper_dir=str(wrapper_dir),
+            wrapper_dir=WRAPPER_DIR,
             chain_flag=chain_flag
         )
 
@@ -969,8 +1038,18 @@ def main():
         else:
             print("ℹ️  Affinity property already present; skipping injection.")
     stats = yaml_stats(yaml_path)
-    constraint, mem_req, auto_flags = gpu_and_flags(
+    constraint, mem_req, auto_flags, vram_est = gpu_and_flags(
         stats["residues"], stats["chains"], stats["ligands"], stats["mods"])
+    
+    if constraint is None:                      # won’t fit on A100‑40
+        # record oversized job and abort gracefully
+        skipped_path = pathlib.Path("skipped_jobs.txt")
+        skipped_path.open("a").write(
+            f"{yaml_path}\tneeds ≈{vram_est:.1f} GB VRAM (skip)\n")
+        print("⏭  SKIPPED – too large for any GPU:", yaml_path.name)
+        return
+
+    
     flags = auto_flags[:]
     if args.no_kernels:
         flags += ["--no_kernels"]

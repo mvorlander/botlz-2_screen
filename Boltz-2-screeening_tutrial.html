@@ -1,0 +1,602 @@
+<!DOCTYPE html><html><head>
+      <title>Boltz-2-screeening_tutrial</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      
+      <link rel="stylesheet" href="file:////Users/matthias.vorlaender/.vscode/extensions/shd101wyy.markdown-preview-enhanced-0.8.18/crossnote/dependencies/katex/katex.min.css">
+      
+      
+      
+      
+      
+      <style>
+      code[class*=language-],pre[class*=language-]{color:#333;background:0 0;font-family:Consolas,"Liberation Mono",Menlo,Courier,monospace;text-align:left;white-space:pre;word-spacing:normal;word-break:normal;word-wrap:normal;line-height:1.4;-moz-tab-size:8;-o-tab-size:8;tab-size:8;-webkit-hyphens:none;-moz-hyphens:none;-ms-hyphens:none;hyphens:none}pre[class*=language-]{padding:.8em;overflow:auto;border-radius:3px;background:#f5f5f5}:not(pre)>code[class*=language-]{padding:.1em;border-radius:.3em;white-space:normal;background:#f5f5f5}.token.blockquote,.token.comment{color:#969896}.token.cdata{color:#183691}.token.doctype,.token.macro.property,.token.punctuation,.token.variable{color:#333}.token.builtin,.token.important,.token.keyword,.token.operator,.token.rule{color:#a71d5d}.token.attr-value,.token.regex,.token.string,.token.url{color:#183691}.token.atrule,.token.boolean,.token.code,.token.command,.token.constant,.token.entity,.token.number,.token.property,.token.symbol{color:#0086b3}.token.prolog,.token.selector,.token.tag{color:#63a35c}.token.attr-name,.token.class,.token.class-name,.token.function,.token.id,.token.namespace,.token.pseudo-class,.token.pseudo-element,.token.url-reference .token.variable{color:#795da3}.token.entity{cursor:help}.token.title,.token.title .token.punctuation{font-weight:700;color:#1d3e81}.token.list{color:#ed6a43}.token.inserted{background-color:#eaffea;color:#55a532}.token.deleted{background-color:#ffecec;color:#bd2c00}.token.bold{font-weight:700}.token.italic{font-style:italic}.language-json .token.property{color:#183691}.language-markup .token.tag .token.punctuation{color:#333}.language-css .token.function,code.language-css{color:#0086b3}.language-yaml .token.atrule{color:#63a35c}code.language-yaml{color:#183691}.language-ruby .token.function{color:#333}.language-markdown .token.url{color:#795da3}.language-makefile .token.symbol{color:#795da3}.language-makefile .token.variable{color:#183691}.language-makefile .token.builtin{color:#0086b3}.language-bash .token.keyword{color:#0086b3}pre[data-line]{position:relative;padding:1em 0 1em 3em}pre[data-line] .line-highlight-wrapper{position:absolute;top:0;left:0;background-color:transparent;display:block;width:100%}pre[data-line] .line-highlight{position:absolute;left:0;right:0;padding:inherit 0;margin-top:1em;background:hsla(24,20%,50%,.08);background:linear-gradient(to right,hsla(24,20%,50%,.1) 70%,hsla(24,20%,50%,0));pointer-events:none;line-height:inherit;white-space:pre}pre[data-line] .line-highlight:before,pre[data-line] .line-highlight[data-end]:after{content:attr(data-start);position:absolute;top:.4em;left:.6em;min-width:1em;padding:0 .5em;background-color:hsla(24,20%,50%,.4);color:#f4f1ef;font:bold 65%/1.5 sans-serif;text-align:center;vertical-align:.3em;border-radius:999px;text-shadow:none;box-shadow:0 1px #fff}pre[data-line] .line-highlight[data-end]:after{content:attr(data-end);top:auto;bottom:.4em}html body{font-family:'Helvetica Neue',Helvetica,'Segoe UI',Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ol,html body>ul{margin-bottom:16px}html body ol,html body ul{padding-left:2em}html body ol.no-list,html body ul.no-list{padding:0;list-style-type:none}html body ol ol,html body ol ul,html body ul ol,html body ul ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:700;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:700}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::after,html body code::before{letter-spacing:-.2em;content:'\00a0'}html body pre>code{padding:0;margin:0;word-break:normal;white-space:pre;background:0 0;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:after,html body pre code:before,html body pre tt:after,html body pre tt:before{content:normal}html body blockquote,html body dl,html body ol,html body p,html body pre,html body ul{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body code,html body pre{word-wrap:break-word;white-space:pre}}.markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview ul{list-style:disc}.markdown-preview ul ul{list-style:circle}.markdown-preview ul ul ul{list-style:square}.markdown-preview ol{list-style:decimal}.markdown-preview ol ol,.markdown-preview ul ol{list-style-type:lower-roman}.markdown-preview ol ol ol,.markdown-preview ol ul ol,.markdown-preview ul ol ol,.markdown-preview ul ul ol{list-style-type:lower-alpha}.markdown-preview .newpage,.markdown-preview .pagebreak{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center!important}.markdown-preview:not([data-for=preview]) .code-chunk .code-chunk-btn-group{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .status{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0;min-height:100vh}@media screen and (min-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{font-size:14px!important;padding:1em}}@media print{html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div,html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% - 300px);padding:2em calc(50% - 457px - 300px / 2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}
+/* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+      </style>
+      <!-- The content below will be included at the end of the <head> element. --><script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    // your code here
+  });
+</script></head><body for="html-export">
+    
+    
+      <div class="crossnote markdown-preview  ">
+      
+<h1 id="boltz2-screening-tutorial">Boltz‑2 Screening Tutorial </h1>
+<p><em>High‑throughput structure prediction and evalution with <code>boltz-screen.sh</code></em></p>
+<hr>
+<p><code>boltz-screen.sh</code> automates the entire workflow of predicting many <em>targets</em> against one or more <em>bait</em> entities. The script:</p>
+<ol>
+<li><strong>Generates YAML input files</strong> for every bait–target pair, supporting a number of user-supplied infput formats.</li>
+<li><strong>Creates a Slurm job array</strong> (or runs locally) and chooses GPU/host‑RAM requirements automatically.</li>
+<li><strong>Copies every prediction’s output</strong> into a clean <code>results/&lt;JOB_NAME&gt;/…</code> folder and keeps all Slurm logs in <code>slurm/</code>.</li>
+<li><strong>Launches <code>boltz-analysis.sh</code></strong> afterwards to collate metrics, make plots and dashboards, and write ready‑made ChimeraX sessions.</li>
+</ol>
+<h2 id="script-path">Script path </h2>
+<p>The <a href="http://boltz-screen.sh">boltz-screen.sh</a> should be in your path variable (meaning, you can launch it from anywhere by typing <code>boltz-screen.sh</code>). If this does not work, execute this <strong>once</strong>:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>/groups/plaschka/shared/software/scripts/update_bashrc.sh
+</code></pre><p>Restart your terminal and try again.</p>
+<hr>
+<h2 id="overview">Overview </h2>
+<p>The screen allows you to predict a single bait complex against many targets. The bait complex may contain multiple components such as proteins, nucleic acids, ligands, and ions.  You need to provide minimally two files:</p>
+<ul>
+<li><strong>Bait file</strong> – lists all entities that will appear in every complex.</li>
+<li><strong>Screen file</strong> – lists all targets to be predicted against the bait.</li>
+<li><strong>Optional</strong>: <strong>Chain mapping file</strong> – assigns human‑readable names to the chains in the final prediction.</li>
+</ul>
+<hr>
+<h3 id="before-you-start-memory-considerations-on-our-hardware">Before you start: Memory considerations on our hardware </h3>
+<p>The script tries to alloactae appropriate GPU and host RAM for each job based on the input composition. The following table summarizes the typical VRAM requirements for different input compositions. If your job exceeds the VRAM limit, boltz will abort the run, but the SLURM job will still be shown as COMPELTED. The downstream analysis script will later identify failed runs.</p>
+<table>
+<thead>
+<tr>
+<th>Input composition (single prediction)</th>
+<th>Typical VRAM on GPU card A100-40 GB¹</th>
+<th>When it all fits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Protein-only</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>≤ 1,000 residues, default <code>sampling_steps=100</code>, <code>recycles=3</code></td>
+<td>28-35 GB</td>
+<td>A100-40 GB OK</td>
+</tr>
+<tr>
+<td><strong>Protein + RNA</strong> (two polymer chains, total ~1,200 nt/aa)</td>
+<td>34-40 GB</td>
+<td>A100-40 GB borderline → often OOM; A100-80 GB or H100 advised</td>
+</tr>
+<tr>
+<td><strong>Protein/RNA + ≤ 4 ligands/ions</strong></td>
+<td>+0.4-0.6 GB per CCD</td>
+<td>still fits if base system &lt; 34 GB</td>
+</tr>
+<tr>
+<td><strong>&gt; &gt;1.5 k total residues</strong></td>
+<td>40-70 GB</td>
+<td>Needs A100-80 GB (g4) or H100-80 GB, which aren’t available on our cluster</td>
+</tr>
+</tbody>
+</table>
+<h2 id="input-files-and-formatting-rules">Input files and formatting rules </h2>
+<hr>
+<p>The wrapper accepts a variety of input formats, which are converted to Boltz‑2 YAML files internally, such as:</p>
+<ul>
+<li>Uniprot IDs</li>
+<li>Path to a FASTA file (protein or nucleic acid)</li>
+<li>CCD codes (ligands or ions, check here <a href="https://www.ebi.ac.uk/pdbe-srv/pdbechem/">https://www.ebi.ac.uk/pdbe-srv/pdbechem/</a>)</li>
+<li>PTMs (see next section)</li>
+</ul>
+<h4 id="inline-ptm-syntax">Inline PTM syntax </h4>
+<hr>
+<p>Add one or more <em>position:CCD</em> tokens <strong>after</strong> the sequence token:</p>
+<ul>
+<li><code>Q13838&nbsp;38:SEP</code> →&nbsp;Ser‑38 is phosphorylated (SEP) in chain&nbsp;<em>Q13838</em></li>
+<li><code>P05067&nbsp;15:CSO&nbsp;42:MSE</code> →&nbsp;two modifications in the same chain</li>
+</ul>
+<p>The most common PTM codes are:</p>
+<table>
+<thead>
+<tr>
+<th>PTM (type of modified residue)</th>
+<th>CCD&nbsp;code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phospho-Serine</td>
+<td><strong>SEP</strong></td>
+</tr>
+<tr>
+<td>Phospho-Threonine</td>
+<td><strong>TPO</strong></td>
+</tr>
+<tr>
+<td>Phospho-Tyrosine</td>
+<td><strong>PTR</strong></td>
+</tr>
+<tr>
+<td>Seleno-Methionine</td>
+<td><strong>MSE</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="41-bait-file–bait-file">4.1&nbsp;Bait file (<code>--bait &lt;FILE&gt;</code>) </h4>
+<ul>
+<li><strong>Exactly one file</strong> listing every entity that must appear in <strong>every</strong> complex.</li>
+<li>Accepted line types (one per line, blanks &amp; lines starting with <code>#</code> are ignored):</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Q13838</code></td>
+<td>UniProt protein</td>
+</tr>
+<tr>
+<td><code>Q13838 38:SEP</code></td>
+<td>Protein with an inline PTM (see below)</td>
+</tr>
+<tr>
+<td><code>data/myRNA.fa</code></td>
+<td>FASTA file (protein or nucleic acid)</td>
+</tr>
+<tr>
+<td><code>ATP</code></td>
+<td>Ligand/ion (3‑letter CCD or ion code, case‑insensitive)</td>
+</tr>
+<tr>
+<td><code>SMILES NAME</code></td>
+<td>Custom ligand from <em>.smi</em> file</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ordering matters</strong> – Boltz numbers chains <em>strictly</em> according to polymer type. You should therefore also follow the convention and order the entities in your bait file like this:</p>
+<blockquote>
+<ol>
+<li>Proteins</li>
+<li>RNAs</li>
+<li>DNAs</li>
+<li>Ligands</li>
+<li>Small ions</li>
+</ol>
+</blockquote>
+<h4 id="42-screen-file–screen-file">4.2&nbsp;Screen file (<code>--screen &lt;FILE&gt;</code>) </h4>
+<p>Plain text: <strong>one target per line</strong>. You can use</p>
+<ul>
+<li>UniProt ID</li>
+<li>FASTA path</li>
+<li>CCD code (ligand or ion)</li>
+</ul>
+<p>PTMS maybe included in the same way as in the bait file, e.g. <code>Q13838 38:SEP</code>.</p>
+<h3 id="43-chainmapping-file-optional–but-highly-recommended">4.3&nbsp;Chain‑mapping file (optional,  but highly recommended) </h3>
+<h3 id="chain-map-file">Chain-map file </h3>
+<p>To give <strong>human-readable labels</strong> in the analysis stage, create a <strong>plain-text chain-map file</strong> that assigns names to your prediction targets. The chain mapping file lists which chain corresponds to which entity in the final prediction</p>
+<blockquote>
+<p><strong>Heads-up</strong><br>
+The final chain ID of the <em>screen</em> entity depends on what’s already in your <strong>bait</strong>:<br>
+if your bait contains both protein/NA chains <strong>and</strong> ligands, the screened chain is inserted <strong>between</strong> the bait protein/NA chains and any ligand chains.</p>
+</blockquote>
+<h3 id="example-chain-map-file">Example chain-map file </h3>
+<h4 id="example-1–two-bait-proteins-second-is-pser-38-vs-two-rnas">Example&nbsp;1 – Two bait proteins (second is pSer-38) vs two RNAs </h4>
+<summary>Input files</summary>
+<h4 id="bait_proteinstxt"><code>bait_proteins.txt</code> </h4>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>Q13838          # UniProt of bait protein
+./RNA.fa        # Bait RNA sequence
+ATP             # Ligand (CCD code)
+MG              # Mg²⁺ ion
+</code></pre><h4 id="screen_rnastxt"><code>screen_rnas.txt</code> </h4>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>Q09161          # Screen target 1
+Q13838 38:SEP   # Screen target 2 (Ser-38 phosphorylated)
+./RNA2.fa       # Screen RNA sequence
+</code></pre><h4 id="chain_mappingtxt"><code>chain_mapping.txt</code> </h4>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>0=UAP56         # bait protein
+1=baitRNA       # bait RNA
+2=target        # screened protein/RNA (inserted before ligands)
+3=ATP           # ligand
+4=Mg2+          # ion
+</code></pre>
+<p><strong>Submission command</strong></p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>boltz-screen.sh <span class="token parameter variable">--bait</span> bait.txt <span class="token punctuation">\</span>
+                     <span class="token parameter variable">--screen</span> screen.txt <span class="token punctuation">\</span>
+                     <span class="token parameter variable">--chain_mapping</span> chain_mapping.txt <span class="token punctuation">\</span>
+                     <span class="token parameter variable">-n</span> MyScreenName
+</code></pre><hr>
+<h3 id="example-2–screening-a-protein–rna–atp–mg2-bait-complex-against-proteinsrnas">Example&nbsp;2 – Screening a protein + RNA + ATP + Mg²⁺ bait complex against proteins/RNAs </h3>
+<summary>Input files</summary>
+<h4 id="bait_proteinstxt-1"><code>bait_proteins.txt</code> </h4>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>Q09161
+Q13838 38:SEP
+</code></pre><h4 id="screen_rnastxt-1"><code>screen_rnas.txt</code> </h4>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>/data/RNA1.fa
+/data/RNA2.fa
+</code></pre><h4 id="chain_mappingtxt-1"><code>chain_mapping.txt</code> </h4>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>0=UAP56         # first bait protein
+1=baitRNA       # second bait protein (pSer-38)
+2=target        # screened RNA (still before ligands, if any)
+</code></pre>
+<p><strong>Submission command</strong></p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>boltz-screen.sh <span class="token parameter variable">--bait</span> bait_proteins.txt <span class="token punctuation">\</span>
+                     <span class="token parameter variable">--screen</span> screen_rnas.txt <span class="token punctuation">\</span>
+                     <span class="token parameter variable">-n</span> prot_vs_rna
+</code></pre><hr>
+<h3 id="example-3–protein–rna-bait-vs-different-ligands">Example&nbsp;3 – Protein + RNA bait vs different ligands </h3>
+<summary>Input files</summary>
+<h4 id="bait_combolist"><code>bait_combo.list</code> </h4>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>P69905
+bait_rna.fa
+MG
+</code></pre><h4 id="screen_proteinstxt"><code>screen_proteins.txt</code> </h4>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>ATP
+ADP
+AMP
+</code></pre><h4 id="chain_mappingtxt-2"><code>chain_mapping.txt</code> </h4>
+<pre data-role="codeBlock" data-info="text" class="language-text text"><code>0=UAP56         # bait protein
+1=baitRNA       # bait RNA
+2=targetLigand  # screened ligand (inserted after proteins/RNAs)
+3=MG            # ion from bait
+</code></pre>
+<p><strong>Submission command</strong></p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>boltz-screen.sh <span class="token parameter variable">--bait</span> bait_combo.list <span class="token punctuation">\</span>
+                     <span class="token parameter variable">--screen</span> screen_proteins.txt <span class="token punctuation">\</span>
+                     <span class="token parameter variable">--chain_mapping</span> chain_mapping.txt <span class="token punctuation">\</span>
+                     <span class="token parameter variable">-n</span> lig_screen
+</code></pre><hr>
+<h2 id="6-interpreting-the-output">6. Interpreting the output </h2>
+<h3 id="folder-layout-produced-by-the-wrapper">Folder layout produced by the wrapper </h3>
+<hr>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>boltz_screen_(&lt;DATE&gt;or&lt;NAME&gt;)/
+├─ inputs/                  # original bait, screen &amp; mapping files (copied)
+├─ results/
+│   └─ 001_&lt;JOB_NAME&gt;/      # one folder per target (YAML + prediction output)
+│       ├─ *.yaml
+│       ├─ slurm_&lt;ID&gt;.out
+│       ├─ lightning_logs/ …       (standard Boltz output)
+│       ├─ predictions/ …          (CIF, PAE, pLDDT …)
+│       └─ CHIMERAX_&lt;JOB&gt;_analysis.cxc
+├─ slurm/                   # job‑array *.tmp.out + analysis logs
+├─ plots/                   # dashboards &amp; dot‑plots
+├─ analytics/               # CSV tables (slurm_metrics, failed jobs …)
+└─ summary_metrics.csv
+</code></pre><ol>
+<li><strong>After the array finishes</strong> the analysis job runs automatically.</li>
+<li>Open<br>
+<em><code>plots/scatter_dashboard.html</code></em> – interactive metric explorer (defaults: confidence_score × complex_pLDDT).</li>
+<li><strong>summary_metrics.csv</strong> – one row per job with all numeric metrics (OK and failed).</li>
+<li><strong>CHIMERAX_…_analysis.cxc</strong> inside every prediction folder – double‑click to load the model with rainbow chains, interfaces, ligands highlighted &amp; PAE overlay.</li>
+</ol>
+<hr>
+<p>Using the scatter_dashboard.html:</p>
+<p>When predicting a confident bait vs a list of candidates, the overall quality metrics such as plDDT scorte will be dominated by the confident bait protein.<br>
+It is therefore best to look at specific chain-chain contact metrics, which are given in the in <code>ipmtm_chain_i_vs_chain_j</code> metrics. Let us look at a specific example:</p>
+<p>We ran a prediction with:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment">#bait:</span>
+P38919
+P61326
+Q9Y5S9
+./RNA.fa
+ATP
+MG
+</code></pre><pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment">#screen</span>
+a bunch of uniprots
+</code></pre><pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment">#EJC_chain_mapping.txt</span>
+<span class="token assign-left variable">0</span><span class="token operator">=</span>EIF4A3
+<span class="token assign-left variable">1</span><span class="token operator">=</span>MAGOH
+<span class="token assign-left variable">2</span><span class="token operator">=</span>Y14
+<span class="token assign-left variable">3</span><span class="token operator">=</span>RNA
+<span class="token assign-left variable">4</span><span class="token operator">=</span>screen
+<span class="token assign-left variable">5</span><span class="token operator">=</span>ATP
+<span class="token assign-left variable">6</span><span class="token operator">=</span>MG
+</code></pre><p>In this case, The dropdowns from the dashboard will show amongst many more) the following metrics:</p>
+<ul>
+<li><em>iptm_EIF4A3_vs_screen</em><br>
+and</li>
+<li><em>iptm_screen_vs_EIF4A3</em></li>
+</ul>
+<p>Those scores will not be identical, since the metric is directional; the two numbers answer subtly different biological questions.</p>
+<ul>
+<li>The <em>iptm_EIF4A3_vs_screen</em> score asnswers<br>
+“How well is  the screened protein positioned relative to the (assumed correct) scaffold of EIF4A3?”.</li>
+<li>The <em>iptm_screen_vs_EIF4A3</em> score answers  “How well is EIF4A3 positioned when I trust the screened protein as the anchor?”</li>
+</ul>
+<h2>More information on the metrics is available in the next section.</h2>
+<p>The Boltz-2 scatter dashboard displays several quantitative metrics for each predicted complex, plotted along the X-axis, Y-axis, marker size, and marker colour. The default configuration is:</p>
+<ul>
+<li><strong>X-axis</strong>: <strong>confidence_score</strong></li>
+<li><strong>Y-axis</strong>: <strong>complex_plddt</strong></li>
+<li><strong>Marker size</strong>: <strong>iptm</strong></li>
+<li><strong>Marker colour</strong>: <strong>complex_iplddt</strong></li>
+</ul>
+<p>Each metric captures a different aspect of model confidence or structural accuracy:</p>
+<ul>
+<li><strong>confidence_score</strong> is a composite ranking score combining overall per-residue confidence and interface accuracy. <a href="https://wemol.wecomput.com/ui/data/modules.html">wemol.wecomput.com</a></li>
+<li><strong>complex_plddt</strong> measures average per-residue confidence across the whole complex; high values indicate reliable fold predictions. <a href="https://wemol.wecomput.com/ui/data/modules.html">wemol.wecomput.com</a></li>
+<li><strong>iptm</strong> (interface predicted TM-score) quantifies the predicted accuracy of subunit interfaces; values &gt; 0.8 imply high-quality interface modelling. <a href="https://www.ebi.ac.uk/training/online/courses/alphafold/inputs-and-outputs/evaluating-alphafolds-predicted-structures-using-confidence-scores/confidence-scores-in-alphafold-multimer/?utm_source=chatgpt.com">ebi.ac.uk</a></li>
+<li><strong>complex_iplddt</strong> weights per-residue confidence toward interface residues, highlighting how well the model resolved the binding region. <a href="https://wemol.wecomput.com/ui/data/modules.html">wemol.wecomput.com</a></li>
+</ul>
+<p>Below we unpack each metric, explain its range and interpretation, and suggest how to use it in practice.</p>
+<hr>
+<h2>1 confidence_score</h2>
+<ul>
+<li><strong>Definition:</strong><br>
+A linear combination of interface-focused confidence (<strong>iptm</strong>) and global per-residue confidence (<strong>complex_plddt</strong>):
+<blockquote>
+<p><code>confidence_score = 0.8 × complex_plddt + 0.2 × iptm</code> <a href="https://wemol.wecomput.com/ui/data/modules.html">wemol.wecomput.com</a></p>
+</blockquote>
+</li>
+<li><strong>Range:</strong> 0 to 1.0</li>
+<li><strong>Interpretation:</strong><br>
+Combines overall fold reliability with interface accuracy into a single ranking score. Higher values indicate both a well-predicted global fold and a confidently modelled interface.</li>
+<li><strong>Use case:</strong><br>
+• <strong>Rapid prioritization</strong> – sort by <code>confidence_score</code> to pick top candidates for detailed inspection or experimental validation.<br>
+• <strong>Balancing fold vs. interface</strong> – because it weights fold confidence more heavily (80%), high-scoring complexes generally have little risk of gross misfolding. <a href="https://wemol.wecomput.com/ui/data/modules.html">wemol.wecomput.com</a></li>
+</ul>
+<hr>
+<h2>2 complex_plddt</h2>
+<ul>
+<li><strong>Definition:</strong><br>
+The <strong>predicted Local Distance Difference Test</strong> (pLDDT) averaged across all residues in the complex. pLDDT is AlphaFold-derived and repurposed by Boltz-2 for complexes. <a href="https://www.ebi.ac.uk/training/online/courses/alphafold/glossary-of-terms/?utm_source=chatgpt.com">ebi.ac.uk</a></li>
+<li><strong>Range:</strong> 0 to 1.0</li>
+<li><strong>Thresholds:</strong>
+<ul>
+<li>
+<blockquote>
+<p>0.7 – high overall confidence</p>
+</blockquote>
+</li>
+<li>0.5–0.7 – moderate confidence (“gray zone”)</li>
+<li>&lt; 0.5 – low confidence; likely disordered or misfolded regions</li>
+</ul>
+</li>
+<li><strong>Interpretation:</strong><br>
+Reflects local structural reliability at the residue level; values near 1.0 indicate the model is very confident in atomic positions. <a href="https://wemol.wecomput.com/ui/data/modules.html">wemol.wecomput.com</a></li>
+<li><strong>Use case:</strong><br>
+• <strong>Assess global fold</strong> – ensure your complex is not fundamentally misfolded before interpreting interface metrics.<br>
+• <strong>Color-coding</strong> – use complex_plddt to colour survivors vs. failures in multi-parameter sweeps.</li>
+</ul>
+<hr>
+<h2>3 iptm (interface pTM)</h2>
+<ul>
+<li><strong>Definition:</strong><br>
+The <strong>predicted TM-score</strong> focused on residue-pair contacts at the interface between chains in a complex. It measures the expected structural similarity of interfaces to the true bound state. <a href="https://www.ebi.ac.uk/training/online/courses/alphafold/inputs-and-outputs/evaluating-alphafolds-predicted-structures-using-confidence-scores/confidence-scores-in-alphafold-multimer/?utm_source=chatgpt.com">ebi.ac.uk</a></li>
+<li><strong>Range:</strong> 0 to 1.0</li>
+<li><strong>Thresholds:</strong>
+<ul>
+<li>
+<blockquote>
+<p>0.8 – high-quality interface prediction</p>
+</blockquote>
+</li>
+<li>0.6–0.8 – ambiguous (“gray zone”)</li>
+<li>&lt; 0.6 – likely failed interface modelling</li>
+</ul>
+</li>
+<li><strong>Interpretation:</strong><br>
+Captures how well the model predicts relative positioning of subunits; high ipTM but low global pLDDT suggests the fold is good but local regions may be uncertain. <a href="https://wemol.wecomput.com/ui/data/modules.html">wemol.wecomput.com</a></li>
+<li><strong>Use case:</strong><br>
+• <strong>Interface screening</strong> – for affinity or docking applications, you often want ipTM &gt; 0.8.<br>
+• <strong>Outlier detection</strong> – points with high complex_plddt but low ipTM may have correct folds but misaligned interfaces.</li>
+</ul>
+<hr>
+<h2>4 complex_iplddt</h2>
+<ul>
+<li><strong>Definition:</strong><br>
+A variant of pLDDT that <strong>weights per-residue confidence toward interface residues</strong>, highlighting how confidently the model localizes binding-site regions. <a href="https://wemol.wecomput.com/ui/data/modules.html">wemol.wecomput.com</a></li>
+<li><strong>Range:</strong> 0 to 1.0</li>
+<li><strong>Interpretation:</strong><br>
+Values close to global complex_plddt unless interface regions are especially poorly or well-resolved. A gap between complex_plddt and complex_iplddt signals heterogeneous confidence distributions. <a href="https://wemol.wecomput.com/ui/data/modules.html">wemol.wecomput.com</a></li>
+<li><strong>Use case:</strong><br>
+• <strong>Refine ligand-binding candidates</strong> – prefer complexes where both complex_plddt and complex_iplddt are high, indicating uniform confidence.<br>
+• <strong>Detect interface disorder</strong> – a drop in complex_iplddt vs. complex_plddt warns of flexible or unresolved binding loops.</li>
+</ul>
+<hr>
+<h2>5 Additional metrics you might encounter</h2>
+<p>Although the scatter dashboard focuses on the four metrics above, you may also see:</p>
+<ul>
+<li><strong>pTM (global pTM)</strong> – the overall TM-score for the entire complex, less interface-specific than ipTM <a href="https://www.ebi.ac.uk/training/online/courses/alphafold/inputs-and-outputs/evaluating-alphafolds-predicted-structures-using-confidence-scores/confidence-scores-in-alphafold-multimer/?utm_source=chatgpt.com">ebi.ac.uk</a></li>
+<li><strong>Predicted Aligned Error (PAE)</strong> – a 2D matrix showing residue-pair error estimates; use the PAE heat-maps for domain-interaction confidence <a href="https://en.wikipedia.org/wiki/Predicted_Aligned_Error?utm_source=chatgpt.com">en.wikipedia.org</a></li>
+</ul>
+<p>These supplementary metrics can be plotted or referenced if you enable <strong>all-plots</strong> mode during analysis.</p>
+<hr>
+<h2 id="frequently-asked-questions">Frequently Asked Questions </h2>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Can I screen ligand libraries?</strong></td>
+<td>Yes – put each CCD code or SMILES line in <code>--screen</code>.</td>
+</tr>
+<tr>
+<td><strong>Do I need MSAs for RNA/DNA?</strong></td>
+<td>No – MSA slots are ignored for nucleic acids.</td>
+</tr>
+<tr>
+<td><strong>Can I resume a failed screen?</strong></td>
+<td>Re‑run the same command; existing <code>results/*/confidence_*.json</code> folders are skipped automatically.</td>
+</tr>
+<tr>
+<td><strong>Can start the analysis manually</strong></td>
+<td>Yes, you can run <code>boltz-analysis.sh &lt;screen_dir&gt; -c chain_map.txt </code> ’</td>
+</tr>
+<tr>
+<td><strong>Why are some predictions filtered out before they are even submitted</strong></td>
+<td>botlz-2 needs a lot of memory for large predictions, and in order not to waste resourced the wrapper script won’t submit predictions that will certainly fail on our hardware. (see memory consideration section  )` ’</td>
+</tr>
+</tbody>
+</table>
+<hr>
+
+      </div>
+      <div class="md-sidebar-toc">
+<div class="md-toc">
+<details style="padding:0;;padding-left:0px;" open="">
+        <summary class="md-toc-link-wrapper">
+          <a href="#boltz2-screening-tutorial" class="md-toc-link"><p>Boltz‑2 Screening Tutorial</p>
+</a>
+          </summary>
+        <div>
+          <div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#script-path" class="md-toc-link">
+            <p>Script path</p>
+
+          </a></div><details style="padding:0;;padding-left:24px;" open="">
+        <summary class="md-toc-link-wrapper">
+          <a href="#overview" class="md-toc-link"><p>Overview</p>
+</a>
+          </summary>
+        <div>
+          <div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#before-you-start-memory-considerations-on-our-hardware" class="md-toc-link">
+            <p>Before you start: Memory considerations on our hardware</p>
+
+          </a></div>
+        </div>
+      </details>
+    <details style="padding:0;;padding-left:24px;" open="">
+        <summary class="md-toc-link-wrapper">
+          <a href="#input-files-and-formatting-rules" class="md-toc-link"><p>Input files and formatting rules</p>
+</a>
+          </summary>
+        <div>
+          <div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#43-chainmapping-file-optional--but-highly-recommended" class="md-toc-link">
+            <p>4.3&nbsp;Chain‑mapping file (optional,  but highly recommended)</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#chain-map-file" class="md-toc-link">
+            <p>Chain-map file</p>
+
+          </a></div><details style="padding:0;;padding-left:24px;" open="">
+        <summary class="md-toc-link-wrapper">
+          <a href="#example-chain-map-file" class="md-toc-link"><p>Example chain-map file</p>
+</a>
+          </summary>
+        <div>
+          <div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#example-1--two-bait-proteins-second-is-pser-38-vs-two-rnas" class="md-toc-link">
+            <p>Example&nbsp;1 – Two bait proteins (second is pSer-38) vs two RNAs</p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#bait_proteinstxt" class="md-toc-link">
+            <p><code>bait_proteins.txt</code></p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#screen_rnastxt" class="md-toc-link">
+            <p><code>screen_rnas.txt</code></p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#chain_mappingtxt" class="md-toc-link">
+            <p><code>chain_mapping.txt</code></p>
+
+          </a></div>
+        </div>
+      </details>
+    <details style="padding:0;;padding-left:24px;" open="">
+        <summary class="md-toc-link-wrapper">
+          <a href="#example-2--screening-a-protein--rna--atp--mg2-bait-complex-against-proteinsrnas" class="md-toc-link"><p>Example&nbsp;2 – Screening a protein + RNA + ATP + Mg²⁺ bait complex against proteins/RNAs</p>
+</a>
+          </summary>
+        <div>
+          <div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#bait_proteinstxt-1" class="md-toc-link">
+            <p><code>bait_proteins.txt</code></p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#screen_rnastxt-1" class="md-toc-link">
+            <p><code>screen_rnas.txt</code></p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#chain_mappingtxt-1" class="md-toc-link">
+            <p><code>chain_mapping.txt</code></p>
+
+          </a></div>
+        </div>
+      </details>
+    <details style="padding:0;;padding-left:24px;" open="">
+        <summary class="md-toc-link-wrapper">
+          <a href="#example-3--protein--rna-bait-vs-different-ligands" class="md-toc-link"><p>Example&nbsp;3 – Protein + RNA bait vs different ligands</p>
+</a>
+          </summary>
+        <div>
+          <div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#bait_combolist" class="md-toc-link">
+            <p><code>bait_combo.list</code></p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#screen_proteinstxt" class="md-toc-link">
+            <p><code>screen_proteins.txt</code></p>
+
+          </a></div><div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#chain_mappingtxt-2" class="md-toc-link">
+            <p><code>chain_mapping.txt</code></p>
+
+          </a></div>
+        </div>
+      </details>
+    
+        </div>
+      </details>
+    <details style="padding:0;;padding-left:24px;" open="">
+        <summary class="md-toc-link-wrapper">
+          <a href="#6-interpreting-the-output" class="md-toc-link"><ol start="6">
+<li>Interpreting the output</li>
+</ol>
+</a>
+          </summary>
+        <div>
+          <div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#folder-layout-produced-by-the-wrapper" class="md-toc-link">
+            <p>Folder layout produced by the wrapper</p>
+
+          </a></div>
+        </div>
+      </details>
+    <div class="md-toc-link-wrapper" style="padding:0;;display:list-item;list-style:square;margin-left:42px">
+          <a href="#frequently-asked-questions" class="md-toc-link">
+            <p>Frequently Asked Questions</p>
+
+          </a></div>
+        </div>
+      </details>
+    
+</div>
+</div>
+      <a id="sidebar-toc-btn">≡</a>
+    
+    
+    
+    
+    
+    
+<script>
+
+var sidebarTOCBtn = document.getElementById('sidebar-toc-btn')
+sidebarTOCBtn.addEventListener('click', function(event) {
+  event.stopPropagation()
+  if (document.body.hasAttribute('html-show-sidebar-toc')) {
+    document.body.removeAttribute('html-show-sidebar-toc')
+  } else {
+    document.body.setAttribute('html-show-sidebar-toc', true)
+  }
+})
+</script>
+      
+  
+    </body></html>

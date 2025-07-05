@@ -42,6 +42,52 @@ import functools, time
 import random
 import requests
 
+# ------------------------------------------------------------------
+# ChimeraX helper – write a ready‑to‑open .cxc per prediction folder
+# ------------------------------------------------------------------
+CXC_TEMPLATE = textwrap.dedent("""\
+open predictions/*/*.cif
+open predictions/*/pae*.npz structure last-opened
+rainbow last-opened chains palette bupu
+interfaces last-opened
+hide
+show ligand
+show nucleic
+show c
+style (protein|nucleic|solvent) & @@draw_mode=0 stick
+
+cartoon style modeh def arrows t arrowshelix f arrowscale 1.5 wid 2 thick 1 sides 12 div 20
+cartoon style ~(nucleic|strand) x round
+cartoon style (nucleic|strand) x rect
+cartoon style nucleic x round width 4 thick 4
+nucleotides stubs
+lighting shadows false
+lighting simple
+camera ortho
+
+lighting soft intensity 0.2 fillIntensity 0.5 ambientIntensity 1
+lighting soft
+
+#bg and model colors
+set bgColor white
+
+nucleotides  fill
+style nucleic  stick
+
+graphics silhouettes true
+
+cartoon style  arrowScale 1.5
+""")
+
+def _write_cxc(job_dir: pathlib.Path):
+    """Create {job}_analysis.cxc inside *job_dir* if not present."""
+    cxc_path = job_dir / f"CHIMERAX_{job_dir.name}_analysis.cxc"
+    try:
+        if not cxc_path.exists():
+            cxc_path.write_text(CXC_TEMPLATE)
+    except OSError:
+        pass
+
 # ---------------------------------------------------------------------------
 # UniProt helper -------------------------------------------------------------
 # ---------------------------------------------------------------------------
@@ -214,7 +260,8 @@ def walk_predictions(root: pathlib.Path):
                 and arr.ndim == 2
                 and arr.shape[0] == arr.shape[1])
 
-    for job_dir in sorted(root.glob("*_*")):
+    base_dir = root / "results" if (root / "results").is_dir() else root
+    for job_dir in sorted(base_dir.glob("*_*")):
         if not job_dir.is_dir():
             # skip stray files like slurm_*.err/out etc.
             continue
@@ -340,10 +387,40 @@ def slurm_stats(job_dir: pathlib.Path) -> dict[str, str]:
             for p in job_dir.parent.glob(f"slurm_*_{folder_idx}.out"):
                 out_files = [p]
                 break
-
+    # --- additional search one level higher and in root/slurm -------
     if not out_files:
-        return {}          # give up – nothing to parse
+        parent2 = job_dir.parent.parent           # usually the screen root
+        # direct slurm_* files in the root folder
+        for p in parent2.glob("slurm_*[0-9].out"):
+            try:
+                with open(p, "r") as fh:
+                    head = fh.read(2000)
+                if job_dir.name in head:
+                    out_files = [p]
+                    break
+            except OSError:
+                continue
 
+        # dedicated root/slurm directory
+        if not out_files:
+            slurm_root = parent2 / "slurm"
+            if slurm_root.is_dir():
+                for p in slurm_root.glob("slurm_*[0-9].out"):
+                    try:
+                        with open(p, "r") as fh:
+                            head = fh.read(2000)
+                        if job_dir.name in head:
+                            out_files = [p]
+                            break
+                    except OSError:
+                        continue
+                if not out_files and folder_idx:
+                    for p in slurm_root.glob(f"slurm_*_{folder_idx}.out"):
+                        out_files = [p]
+                        break
+    # If still nothing was found bail out early – avoids IndexError
+    if not out_files:
+        return {}
     # 2) extract JOBID (array task IDs look like 12345_7)
     m = _re.search(r"slurm_([0-9]+(?:_[0-9]+)?)", out_files[0].name)
     if not m:
@@ -594,7 +671,11 @@ def plot_matrix(mat, title, out_html, typ=""):
 # --------------------------------------------------------------------------- #
 def plot_interactive_scatter(df: pd.DataFrame,
                              out_html: pathlib.Path,
-                             filter_ok: bool = True):
+                            filter_ok: bool = True,
+                            init_x: str | None = None,
+                            init_y: str | None = None,
+                            init_color: str | None = None,
+                            init_size: str | None = None):
     """
     Build a Plotly dashboard with 3 dropdowns:
       • X‑axis metric
@@ -617,9 +698,13 @@ def plot_interactive_scatter(df: pd.DataFrame,
     if len(numeric_cols) < 2:
         return   # nothing to plot
 
-    x0, y0 = numeric_cols[:2]
-    c0 = numeric_cols[2] if len(numeric_cols) > 2 else None
-    s0 = numeric_cols[3] if len(numeric_cols) > 3 else None
+    def _pick(name, fallback_idx):
+        return name if (name in numeric_cols) else (numeric_cols[fallback_idx]
+                                                    if len(numeric_cols) > fallback_idx else None)
+    x0 = _pick(init_x, 0)
+    y0 = _pick(init_y, 1)
+    c0 = _pick(init_color, 2)
+    s0 = _pick(init_size, 3)
 
     fig = go.Figure()
 
@@ -792,6 +877,9 @@ def main():
     # iterate through all prediction folders                              #
     # ------------------------------------------------------------------- #
     for job, status, conf_json, mats, yaml_file in walk_predictions(root):
+        # absolute path of this prediction folder
+        job_dir_path = (root / "results" / job) if (root / "results").is_dir() else (root / job)
+        _write_cxc(job_dir_path)
         if status == FAILED_MARKER:
             parts = job.split("_")
             idx  = parts[0] if parts else ""
@@ -959,7 +1047,15 @@ def main():
     vprint("   combined dot plot finished")
 
     # interactive scatter dashboard
-    plot_interactive_scatter(ok_df, plots_dir / "scatter_dashboard.html")
+    
+    plot_interactive_scatter(
+        ok_df,
+        plots_dir / "scatter_dashboard.html",
+        init_x="confidence_score",
+        init_y="complex_plddt",
+        init_size="iptm",
+        init_color="complex_iplddt"
+    )
 
     vprint("📊  All plots in", plots_dir)
     print("📊  All plots in", plots_dir)
