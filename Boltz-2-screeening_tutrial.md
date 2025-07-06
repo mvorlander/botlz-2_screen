@@ -433,4 +433,68 @@ These supplementary metrics can be plotted or referenced if you enable **all-plo
 | **Can start the analysis manually** | Yes, you can run `boltz-analysis.sh <screen_dir> -c chain_map.txt ` ' |
 | **Why are some predictions filtered out before they are even submitted** | boltz-2 needs a lot of memory for large predictions, and in order not to waste resourced the wrapper script won't submit predictions that will certainly fail on our hardware. (see memory consideration section  )` ' |
 
+
+
+## 7. Using `boltz_fetch_ptm.py` to generate inline‑PTM syntax  
+_Batch retrieval of curated phosphorylation, acetylation, SUMO, ubiquitin & more_
+
+The helper script **`boltz_fetch_ptm.py`** queries the UniProt/EBI PTM API and
+writes two tab‑separated files:
+
+| Column in `<output>.tsv`            | Description                                                  |
+| ----------------------------------- | ------------------------------------------------------------ |
+| `ebi_syntax`                        | Raw peptide‑level annotation from UniProt (sequence : pos : type) |
+| `boltz_notation`                    | Token you can paste directly into a bait or screen file (e.g. `Q13838 38:SEP`) |
+| `source`                            | Experimental evidence database (PRIDE, PhosphoSitePlus, PTMeXchange…) |
+
+It simultaneously creates `<output>.boltz.txt` — **one Boltz token per line** —
+which you can merge into your existing screen file or open in Excel for
+filtering.
+
+```bash
+# All curated PTMs for one entry
+boltz_fetch_ptm.py Q13838 --verbose
+
+# Batch mode: multiple IDs *and* keyword filter (phospho + acetyl only)
+boltz_fetch_ptm.py Q13838,P05067 -t phospho acetyl -o ptms.tsv
+
+# From file + filter for SUMO / ubiquitin + limit per protein
+boltz_fetch_ptm.py -f my_ids.txt -t sumo ubiquitin -n 100
+```
+
+Common keyword filters (`-t`) include:
+
+| Keyword | Captures UniProt annotation containing … |
+| ------- | ---------------------------------------- |
+| `phospho` | Phosphorylation (Ser/Thr/Tyr/His)       |
+| `acetyl`  | Lys/N‑term acetylation                  |
+| `sumo`    | SUMOylation                             |
+| `ubiquitin` | Ubiquitinylation                      |
+| `glyco`   | N‑ or O‑linked glycosylation            |
+| `methyl`  | Lys/Arg methylation                     |
+| `lipid`   | Myristoyl, palmitoyl, prenyl …          |
+
+<br>
+
+**Workflow tip**
+
+1. `boltz_fetch_ptm.py Q13838 -t phospho` → produces `ptms.boltz.txt`
+2. Concatenate into your screen list:  
+   `cat ptms.boltz.txt >> screen.txt`
+3. Run `boltz-screen.sh` normally – inline PTM syntax is handled automatically.
+
+The script prints progress and tells you where it wrote both files:
+
+```
+⏳  Starting UniProt PTM fetch …
+  • Q13838
+✅  Wrote 64 PTMs to ptms.tsv
+✅  Wrote Boltz tokens   to ptms.boltz.txt
+```
+
+If you need the raw evidence, open `ptms.tsv` in a spreadsheet or parse it with
+`pandas`.
+
+---
+
 * * *
