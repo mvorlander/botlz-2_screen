@@ -1,4 +1,4 @@
-# Boltz‑2 Screning Tutorial
+# Boltz‑2 Screening Tutorial
 
 _High‑throughput structure prediction and evaluation with `boltz-screen.sh`_
 
@@ -9,7 +9,7 @@ _High‑throughput structure prediction and evaluation with `boltz-screen.sh`_
    * **`screen.txt`** – one target (UniProt ID / FASTA / CCD) per line  
 2. **Run the screen**  
    ```bash
-   boltz-screen.sh --bait bait.txt --screen screen.txt -n my_screen
+   boltz-screen.sh --bait bait.txt --screen screen.txt -c chain_mapping.txt -n my_screen
 
 ***
 
@@ -48,8 +48,9 @@ The script tries to allocate appropriate GPU and host RAM for each job based on 
 | **Protein/RNA + ≤ 4 ligands/ions** | +0.4-0.6 GB per CCD| still fits if base system < 34 GB |
 | **\> >1.5 k total residues** | 40-70 GB | Needs A100-80 GB (g4) or H100-80 GB, which aren't available on our cluster |
 
+¹ The VRAM requirements are approximate and depend on the specific input sequence, the number of ligands, and the Boltz-2 parameters used. The values are based on empirical measurements and may vary slightly.
 
-##  Input files and formatting rules
+Input files and formatting rules
 -----------------------------------
 The wrapper accepts a variety of input formats, which are converted to Boltz‑2 YAML files internally, such as:
 - Uniprot IDs
@@ -57,24 +58,11 @@ The wrapper accepts a variety of input formats, which are converted to Boltz‑2
 - CCD codes (ligands or ions, check here https://www.ebi.ac.uk/pdbe-srv/pdbechem/)
 - PTMs (see next section)
 
-#### Inline PTM syntax
+The following sections describe the input files in detail, including the bait file, screen file, and optional chain mapping file.
+
 -----------------
-Add one or more *position:CCD* tokens **after** the sequence token:
 
-* `Q13838 38:SEP` → Ser‑38 is phosphorylated (SEP) in chain *Q13838*  
-* `P05067 15:CSO 42:MSE` → two modifications in the same chain  
-
-The most common PTM codes are:
-
-| PTM (type of modified residue) | CCD code             
-| ------------------------------ | -------- |
-| Phospho-Serine                 | **SEP**  
-| Phospho-Threonine              | **TPO**  
-| Phospho-Tyrosine               | **PTR**           
-| Seleno-Methionine              | **MSE**  
-
-
-#### 4.1 Bait file (`--bait <FILE>`)
+####  Bait file (`--bait <FILE>`)
 
 *   **Exactly one file** listing every entity that must appear in **every** complex.
 *   Accepted line types (one per line, blanks & lines starting with `#` are ignored):
@@ -95,7 +83,7 @@ The most common PTM codes are:
 > 4. Ligands
 > 5. Small ions
 
-#### 4.2 Screen file (`--screen <FILE>`)
+#### Screen file (`--screen <FILE>`)
 
 Plain text: **one target per line**. You can use
 *  UniProt ID
@@ -104,20 +92,37 @@ Plain text: **one target per line**. You can use
 
 PTMS maybe included in the same way as in the bait file, e.g. `Q13838 38:SEP`.
 
-### 4.3 Chain‑mapping file (optional,  but highly recommended)
 
-### Chain-map file
+#### Inline PTM syntax
+Add one or more *position:CCD* tokens **after** the sequence token:
+
+* `Q13838 38:SEP` → Ser‑38 is phosphorylated (SEP) in chain *Q13838*  
+* `P05067 15:CSO 42:MSE` → two modifications in the same chain  
+
+The most common PTM codes are:
+
+| PTM (type of modified residue) | CCD code             
+| ------------------------------ | -------- |
+| Phospho-Serine                 | **SEP**  
+| Phospho-Threonine              | **TPO**  
+| Phospho-Tyrosine               | **PTR**           
+| Seleno-Methionine              | **MSE**  
+
+
+
+### Chain‑mapping file (optional,  but highly recommended)
 
 To give **human-readable labels** in the analysis stage, create a **plain-text chain-map file** that assigns names to your prediction targets. The chain mapping file lists which chain corresponds to which entity in the final prediction
 
 > **Heads-up**  
-> The final chain ID of the *screen* entity depends on what’s already in your **bait**:  
-> if your bait contains both protein/NA chains **and** ligands, the screened chain is inserted **between** the bait protein/NA chains and any ligand chains.
+> The final chain ID of the *screen* entity depends on what’s already in your **bait**: 
+> * If your bait contains both protein/NA chains **and** ligands, the screened chain is inserted **between** the bait protein/NA chains and any ligand chains. 
+> * If the screened chain is a ligand, it is inserted **after** the bait protein/NA chains.
 
 ### Example chain-map file
 
 
-#### Example 1 – Two bait proteins (second is pSer-38) vs two RNAs
+#### Example 2 – Screening a protein + RNA + ATP + Mg²⁺ bait complex against proteins/RNAs
 
 Input files
 
@@ -129,8 +134,6 @@ Q13838          # UniProt of bait protein
 ATP             # Ligand (CCD code)
 MG              # Mg²⁺ ion
 ```
-
-
 
 #### `screen_rnas.txt`
 
@@ -164,7 +167,7 @@ boltz-screen.sh --bait bait.txt \
 * * *
 
 
-### Example 2 – Screening a protein + RNA + ATP + Mg²⁺ bait complex against proteins/RNAs
+###  Example 2 – Bait complex vs mixed screening library (second is pSer-38) vs two RNAs
 
 Input files</summary>
 
@@ -243,14 +246,17 @@ boltz-screen.sh --bait bait_combo.list \
 ```
 
 
-
-
-
-
 ## 6. Interpreting the output
 
-### Folder layout produced by the wrapper
+The scripts produces the dollowing outputs:
+* The Boltz-2 outputs (MSAs, predicted structures, and PAE and PDE plots in .npz format)
+* ChimeraX scripts for each prediction to load the model and associate the PAE plot with the model.
+* A summary CSV file with all numeric metrics (conficence metrics and )
+* An itneractive HTML dashboard with scatter plots of the confidence metrics.
+* PAE plots for each predicition
 ----------------------------------------
+
+** Folder layout produced by the wrapper **
 
 ```bash
 boltz_screen_(<DATE>or<NAME>)/
@@ -263,7 +269,7 @@ boltz_screen_(<DATE>or<NAME>)/
 │       ├─ predictions/ …          (CIF, PAE, pLDDT …)
 │       └─ CHIMERAX_<JOB>_analysis.cxc
 ├─ slurm/                   # job‑array *.tmp.out + analysis logs
-├─ plots/                   # dashboards & dot‑plots
+├─ plots/                   # dashboards & PAE plots & dot‑plots
 ├─ analytics/               # CSV tables (slurm_metrics, failed jobs …)
 └─ summary_metrics.csv
 ```
@@ -277,52 +283,7 @@ boltz_screen_(<DATE>or<NAME>)/
 
 * * *
 
-Using the scatter_dashboard.html:
-
-When predicting a confident bait vs a list of candidates, the overall quality metrics such as plDDT scorte will be dominated by the confident bait protein. 
-It is therefore best to look at specific chain-chain contact metrics, which are given in the in `ipmtm_chain_i_vs_chain_j` metrics. Let us look at a specific example:
-
-We ran a prediction with:
-```bash
-#bait:
-P38919
-P61326
-Q9Y5S9
-./RNA.fa
-ATP
-MG
-```
-
-```bash
-#screen
-a bunch of uniprots
-```
-
-```bash 
-#EJC_chain_mapping.txt
-0=EIF4A3
-1=MAGOH
-2=Y14
-3=RNA
-4=screen
-5=ATP
-6=MG
-```
-In this case, The dropdowns from the dashboard will show amongst many more) the following metrics:
-
-- _iptm_EIF4A3_vs_screen_
-and 
-- _iptm_screen_vs_EIF4A3_
-
-
-Those scores will not be identical, since the metric is directional; the two numbers answer subtly different biological questions.
--  The _iptm_EIF4A3_vs_screen_ score asnswers
-“How well is  the screened protein positioned relative to the (assumed correct) scaffold of EIF4A3?”. 
-- The _iptm_screen_vs_EIF4A3_ score answers  “How well is EIF4A3 positioned when I trust the screened protein as the anchor?”
-
-
-More information on the metrics is available in the next section.
---------------------------------------------
+### Using the scatter_dashboard.html:
 
 The Boltz-2 scatter dashboard displays several quantitative metrics for each predicted complex, plotted along the X-axis, Y-axis, marker size, and marker colour. The default configuration is:
 
@@ -389,9 +350,52 @@ Below we unpack each metric, explain its range and interpretation, and suggest h
     Captures how well the model predicts relative positioning of subunits; high ipTM but low global pLDDT suggests the fold is good but local regions may be uncertain. [wemol.wecomput.com](https://wemol.wecomput.com/ui/data/modules.html)
 *   **Use case:**  
     • **Interface screening** – for affinity or docking applications, you often want ipTM > 0.8.  
-    • **Outlier detection** – points with high complex\_plddt but low ipTM may have correct folds but misaligned interfaces.
 
-* * *
+>Note: The mteric `iptm` is directional, meaning that the score for chain A vs chain B may differ from chain B vs chain A!
+<details> <summary>How to interpret directional ipTM metrics</summary>
+
+When predicting a confident bait vs a list of candidates, the overall quality metrics such as plDDT scorte will usually be dominated by the confident bait protein. 
+It is therefore best to look at specific chain-chain contact metrics, which are given in the in `ipmtm_chain_i_vs_chain_j` metrics. Let us look at a specific example:
+
+We ran a prediction with:
+```bash
+#bait:
+P38919
+P61326
+Q9Y5S9
+./RNA.fa
+ATP
+MG
+```
+
+```bash
+#screen
+a bunch of uniprots
+```
+
+```bash 
+#EJC_chain_mapping.txt
+0=EIF4A3
+1=MAGOH
+2=Y14
+3=RNA
+4=screen
+5=ATP
+6=MG
+```
+In this case, The dropdowns from the dashboard will show amongst many more) the following metrics:
+
+- _iptm_EIF4A3_vs_screen_
+and 
+- _iptm_screen_vs_EIF4A3_
+
+
+Those scores will not be identical, since the metric is directional; the two numbers answer subtly different biological questions.
+-  The _iptm_EIF4A3_vs_screen_ score asnswers
+“How well is  the screened protein positioned relative to the (assumed correct) scaffold of EIF4A3?”. 
+- The _iptm_screen_vs_EIF4A3_ score answers  “How well is EIF4A3 positioned when I trust the screened protein as the anchor?”
+</details>
+
 
 4 complex\_iplddt
 -----------------

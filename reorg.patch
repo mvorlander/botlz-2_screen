@@ -1,44 +1,26 @@
+*** Update File: boltz-2_wrapper.py
 @@
--from pathlib import Path
--import shutil, yaml, argparse, subprocess
-+# ---------- NEW IMPORTS ----------
-+from project_layout import DIRS, job_dir, ensure_tree
-+
-+# keep existing imports
-+from pathlib import Path
-+import shutil, yaml, argparse, subprocess
-@@
--# old: work_dir   = Path(f"{idx}_{target}")
--#      results_dir = work_dir / f"boltz_results_{idx}_{target}"
--
-- work_dir = Path(f"{idx}_{target}")      # deeply nested
-- results_dir = work_dir / f"boltz_results_{idx}_{target}"
-+# ---------- NEW FLAT LAYOUT -------------------------------
-+ensure_tree()                                    #  create root/{inputs,results,slurm,…}
-+work_dir    = job_dir(f"{idx}_{target}")         # root/results/001_UAP56_NTD_Q92979
-+results_dir = work_dir                           # keep variable name unchanged so that
-+                                                 # all downstream code which joins
-+                                                 #  results_dir / "msa"
-+                                                 #  results_dir / "predictions"
-+                                                 # still works untouched
-@@
-- slurm_file   = work_dir / f"{idx}_{target}.slurm"
-- slurm_stdout = work_dir / f"slurm_{jobid}.out"
-- slurm_stderr = work_dir / f"slurm_{jobid}.err"
-+ slurm_file   = work_dir / f"{idx}_{target}.slurm"
-+ slurm_stdout = work_dir / f"slurm_{jobid}.out"
-+ slurm_stderr = work_dir / f"slurm_{jobid}.err"
-  # (unchanged – they now live *inside* each job folder)
-@@
--# Save user‑supplied FASTA / YAML *inside* the job working dir
--shutil.copy2(args.fasta, work_dir / Path(args.fasta).name)
-+# ----------- COPY INPUT ONCE PER PROJECT -------------------
-+inp_dst = DIRS["inputs"] / Path(args.fasta).name
-+if not inp_dst.exists():                     # idempotent snapshot
-+    shutil.copy2(args.fasta, inp_dst)
-@@
--# array‑job tmp files go wherever Slurm puts them; we leave them be
-+# ------------ MOVE ARRAY TASK OUTPUTS ---------------------
-+# Slurm array stdout files land next to the wrapper by default; move them ⬇
-+for tmp in Path.cwd().glob("array_*_*.tmp.out"):
-+    tmp.rename(DIRS["slurm"] / tmp.name)
+-# Cluster GPU inventory – adjust if your site adds H100s later
+-# ------------------------------------------------------------------
+-# key  = Slurm --constraint value
+-# cap  = usable device memory in **GB**  (a safety margin is applied below)
+-_GPU_CAPACITY = {
+-    "g2": 32,   # A40‑32 GB  (or V100‑32 GB)
+-    "g3": 40,   # A100‑40 GB
+-    "g4": 40,   # Ampere A100 on the Plaschka cluster (40 GB)
+-}
++# ------------------------------------------------------------------
++# Cluster GPU inventory (Plaschka lab, July 2025)
++# ------------------------------------------------------------------
++# key  = Slurm --constraint value
++# cap  = usable VRAM in **GB** (before safety deduction)
++#   g1 = P100‑12 GB     g2 = V100‑32 GB
++#   g3 = RTX 6000‑24 GB g4 = A100‑40 GB
++_GPU_CAPACITY = {
++    "g1": 12,
++    "g3": 24,
++    "g2": 32,
++    "g4": 40,
++}
+ _SAFETY_MARGIN_GB = 2      # e.g. 40‑2 = 38 GB max on A100‑40
+*** End Patch
