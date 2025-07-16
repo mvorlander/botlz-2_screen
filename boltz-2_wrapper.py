@@ -152,7 +152,12 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from datetime import datetime
+import json       # ← add this line
+import re   # already imported once, keep only one import
 
+def _clean_seq(seq: str) -> str:
+    """Return *seq* stripped of ALL whitespace & line-breaks."""
+    return re.sub(r"\s+", "", seq)
 
 # ------------------------------------------------------------------
 # Absolute directory where this wrapper script resides.
@@ -628,6 +633,108 @@ def make_yaml(src: str,
     return out.resolve()
 
 # --------------------------------------------------------------------------- #
+# AlphaFold-Server JSON helpers                                               #
+# --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+# AlphaFold-Server JSON converter                                             #
+# --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+# AlphaFold-Server JSON converter  (stable, proven)                           #
+# --------------------------------------------------------------------------- #
+def yaml_to_af3(yaml_dict: dict, job_name: str) -> list[dict]:
+    """
+    Translate a Boltz YAML document into AlphaFold-Server JSON.
+
+    • Returns *[job_dict]* – a list with a single job.
+    • Keys match the April-2025 AlphaFold-Server README exactly.
+    • Seeds are left empty so the server chooses its own.
+    """
+    ion_set = {
+        "LI", "NA", "K", "MG", "CA", "MN", "FE", "CO", "NI",
+        "CU", "ZN", "CL", "BR", "IOD", "IOD3", "IOD5"
+    }
+
+    def _ptm(entry):
+        return [
+            {"ptmType": f"CCD_{m['ccd'].upper()}",
+             "ptmPosition": int(m["position"])}
+            for m in entry.get("modifications", [])
+        ]
+
+    def _na_mods(entry):
+        return [
+            {"modificationType": f"CCD_{m['ccd'].upper()}",
+             "basePosition": int(m["position"])}
+            for m in entry.get("modifications", [])
+        ]
+
+    seqs: list[dict] = []
+    for item in yaml_dict.get("sequences", []):
+        kind, data = next(iter(item.items()))
+
+        # ---------------- sequence-bearing kinds ----------------
+        if kind in {"protein", "dna", "rna"}:
+            seq_clean = _clean_seq(data["sequence"])
+            base = {"sequence": seq_clean, "count": 1}
+
+            if kind == "protein":
+                mods = [{"ptmType":      f"CCD_{m['ccd'].upper()}",
+                        "ptmPosition":  int(m["position"])}
+                        for m in data.get("modifications", [])]
+                if mods:
+                    base["modifications"] = mods
+                seqs.append({"proteinChain": base})
+
+            elif kind == "dna":
+                mods = [{"modificationType": f"CCD_{m['ccd'].upper()}",
+                        "basePosition":     int(m["position"])}
+                        for m in data.get("modifications", [])]
+                if mods:
+                    base["modifications"] = mods
+                seqs.append({"dnaSequence": base})
+
+            else:  # rna
+                mods = [{"modificationType": f"CCD_{m['ccd'].upper()}",
+                        "basePosition":     int(m["position"])}
+                        for m in data.get("modifications", [])]
+                if mods:
+                    base["modifications"] = mods
+                seqs.append({"rnaSequence": base})
+
+        # ---------------- ligand / ion ------------------------------------
+    
+
+        elif kind == "ligand":
+            ccd = (data.get("ccd") or data.get("id") or "").upper()
+            # use ion_set defined at the top of the function
+            if ccd in ion_set:
+                seqs.append({"ion": {"ion": ccd, "count": 1}})
+            else:
+                seqs.append({"ligand": {"ligand": f"CCD_{ccd}", "count": 1}})
+
+    job = {
+        "name": job_name,
+        "modelSeeds": [],   # let server generate a random seed
+        "sequences": seqs,
+        "dialect": "alphafoldserver",
+        "version": 1
+    }
+    return [job]
+
+# ---- central hub -----------------------------------------------------------
+def _link_af3_json(json_path: pathlib.Path, root_dir: pathlib.Path) -> None:
+    hub = root_dir / "AF3_JSON"
+    hub.mkdir(exist_ok=True)
+    link = hub / json_path.name
+    if link.exists():
+        return
+    try:
+        link.symlink_to(json_path.resolve())
+    except (OSError, NotImplementedError):
+        import shutil
+        shutil.copy2(json_path, link)
+
+# --------------------------------------------------------------------------- #
 # Slurm template (Apptainer)                                                  #
 # --------------------------------------------------------------------------- #
 
@@ -943,6 +1050,21 @@ def main():
             yaml_dst = sub_out / f"{job_label}.yaml"
             shutil.move(str(yaml_src), yaml_dst)
             print(f"🔄  YAML moved → {yaml_dst}")
+            
+            # ---- create AF3 JSON ------------------------------------------------
+            try:
+                af3_path  = yaml_dst.with_suffix("").with_name(yaml_dst.stem + "_for_AF3.json")
+                created   = not af3_path.exists()
+                if created:
+                    yobj     = yaml.safe_load(yaml_dst.read_text())
+                    af3_json = yaml_to_af3(yobj, job_label)
+                    af3_path.write_text(json.dumps(af3_json, indent=2))
+                _link_af3_json(af3_path, root_out)
+                status = "written" if created else "ready"
+                print(f"   AF3 json {status}: {af3_path.name} – upload to AlphaFold-Server")
+            except Exception as exc:
+                print(f"⚠  AF3 json FAILED for {yaml_dst.name}: {exc}")
+                
             stats = yaml_stats(yaml_dst)
             constraint, mem_req, auto_flags, vram_est = gpu_and_flags(
                 stats["residues"], stats["chains"], stats["ligands"], stats["mods"])
@@ -955,6 +1077,11 @@ def main():
                     f"(≈{vram_est:.1f} GB VRAM)")
                 shutil.rmtree(sub_out, ignore_errors=True)   # clean up empty folder
                 continue
+                # ---------- NEW: honour --local in screening mode ----------
+            if args.local:
+                run_local(yaml_dst, sub_out, auto_flags)
+                print(f"🏃  Local prediction finished: {job_label}")
+                continue            # skip Slurm generation for this target
             flags = auto_flags[:]
             if args.no_kernels:
                 flags += ["--no_kernels"]
@@ -978,7 +1105,10 @@ def main():
             )
 
             jobs_list.append((yaml_dst, sub_out, flags_str, mem_req, constraint))
-
+        if args.local:
+            print("✅  All screening targets were run locally – no Slurm submission.")
+            print(f"📂  AF3_JSON hub: {(root_out / 'AF3_JSON').resolve()}")
+            return
         # ---------------- write jobs.list --------------------------------
         list_path = root_out / "jobs.list"
         with open(list_path, "w") as fh:
@@ -1020,6 +1150,20 @@ def main():
     # single‑run: validate input token / path
     _assert_token_ok(args.input)
     yaml_path = make_yaml(args.input, msa_paths, chain_names)
+        # ---------------- companion AF-Server JSON (single-run) --------------
+    try:
+        af3_path  = yaml_path.with_suffix("").with_name(yaml_path.stem + "_for_AF3.json")
+        created   = not af3_path.exists()
+        if created:
+            yobj     = yaml.safe_load(yaml_path.read_text())
+            af3_json = yaml_to_af3(yobj, yaml_path.stem)
+            af3_path.write_text(json.dumps(af3_json, indent=2))
+        _link_af3_json(af3_path, yaml_path.parent.parent)  # root dir
+        status = "written" if created else "ready"
+        print(f"📝  AF3 json {status}: {af3_path.name} – upload to AlphaFold-Server")
+    except Exception as exc:
+        print(f"⚠  AF3 json FAILED: {exc}")
+    print(f"📂  AF3_JSON hub: {(yaml_path.parent.parent / 'AF3_JSON').resolve()}")
     # ------------------------------------------------------------------ #
     # Optionally inject affinity property                                #
     # ------------------------------------------------------------------ #
