@@ -20,22 +20,7 @@ _High‑throughput structure prediction and evaluation with `boltz-screen.sh`_
 3.  **Copies every prediction’s output** into a clean `results/<JOB_NAME>/…` folder and keeps all Slurm logs in `slurm/`.
 4.  **Launches `boltz-analysis.sh`** afterwards to collate metrics, make plots and dashboards, and write ready‑made ChimeraX sessions.
 
-## Script path
 
-The boltz-screen.sh should be in your path variable (meaning, you can launch it from anywhere by typing `boltz-screen.sh`). If this does not work, execute this **once**:
-
-` /groups/plaschka/shared/software/scripts/update_bashrc.sh `
-
-Restart your terminal and try again.
-* * *
-
-## Overview
-The screen allows you to predict a single bait complex against many targets. The bait complex may contain multiple components such as proteins, nucleic acids, ligands, and ions.  You need to provide minimally two files:
--   **Bait file** – lists all entities that will appear in every complex.
--   **Screen file** – lists all targets to be predicted against the bait.
-- **Optional**: **Chain mapping file** – assigns human‑readable names to the chains in the final prediction.
-
---------------------------------------------------------
 ### Before you start: Memory considerations on our hardware
 
 The script tries to allocate appropriate GPU and host RAM for each job based on the input composition. The following table summarizes the typical VRAM requirements for different input compositions. If your job exceeds the VRAM limit, boltz will abort the run, but the SLURM job will still be shown as COMPLETED. The downstream analysis script will later identify failed runs.
