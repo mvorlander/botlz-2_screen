@@ -846,7 +846,7 @@ fi
 
 # ---------- job‑array & analysis templates -------------------------------
 ARRAY_TEMPLATE = """#!/bin/bash
-#SBATCH --job-name={root}
+#SBATCH --job-name={job_name}
 #SBATCH --array=1-{n}
 # (initial temporary log files in root/slurm – will be re‑directed below)
 #SBATCH --output={root}/slurm/array_%A_%a.tmp.out
@@ -903,7 +903,7 @@ fi
 """
 
 ANALYSIS_TEMPLATE = """#!/bin/bash
-#SBATCH --job-name={root}_ana
+#SBATCH --job-name={job_name}_ana
 #SBATCH --output={root}/slurm/analysis_%j.out
 #SBATCH --error={root}/slurm/analysis_%j.err
 #SBATCH --partition=c
@@ -1201,8 +1201,9 @@ def main():
         # Use the constraint of the first job (all jobs should use the same heuristic)
         constraint = jobs_list[0][4] if jobs_list else "g4|g3|g2|g1"
         array_slurm = root_out / "array.slurm"
+        job_name = root_out.name
         array_slurm.write_text(ARRAY_TEMPLATE.format(
-            root=str(root_out), n=len(jobs_list), mem=f"{max_mem}M")
+            root=str(root_out), job_name=job_name, n=len(jobs_list), mem=f"{max_mem}M")
             .replace("__CONSTRAINT__", constraint)
             .replace("__IMAGE__", str(CONTAINER_IMAGE))
             .replace("__SITEPKGS__", str(CONTAINER_SITEPKGS)))
@@ -1220,6 +1221,7 @@ def main():
         chain_flag = f"--chain-map {args.chain_map}" if args.chain_map else ""
         ana_script = ANALYSIS_TEMPLATE.format(
             root=str(root_out),
+            job_name=job_name,
             array_id=array_id,
             wrapper_dir=WRAPPER_DIR,
             chain_flag=chain_flag

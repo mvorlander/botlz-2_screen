@@ -29,3 +29,4 @@ chmod +x \
 
 echo "Installed to $TARGET_ROOT"
 echo "Container target: $TARGET_ROOT/containers/current"
+echo "Host submission python: $TARGET_ROOT/containers/current/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python"

@@ -22,15 +22,21 @@ _High‑throughput structure prediction and evaluation with `boltz-screen.sh`_
 
 ## Containerized deployment
 
-This repository now includes a fully containerized launcher stack:
+This repository now includes a shared Apptainer runtime plus lightweight host
+launchers:
 
 - `boltz-screen.sh`
 - `boltz-analysis.sh`
 - `boltz-fetch-ptms.sh`
 
-All three wrappers run the Python tools through Apptainer and default to a
-shared container target at `containers/current`. The intended `cbe`
-installation is:
+On `cbe`, `boltz-analysis.sh` runs fully inside Apptainer. The submission
+wrappers `boltz-screen.sh` and `boltz-fetch-ptms.sh` intentionally execute the
+Python runtime bundled inside the shared sandbox directly from the host
+filesystem, because Slurm client commands such as `sbatch` must execute on the
+host, not inside the container. This keeps the deployment self-contained under
+`/resources/AF2_PPI_tools/boltz` without relying on any external Conda env.
+
+The intended `cbe` installation is:
 
 ```text
 /resources/AF2_PPI_tools/boltz
@@ -44,7 +50,8 @@ The reproducible cluster deployment command is:
 
 That script syncs the repo, builds a new Apptainer sandbox from
 `containers/boltz_screen.def`, and points `containers/current` at the freshly
-built runtime.
+built runtime. The screening wrappers use the Python environment already
+bundled inside that sandbox for host-side submission.
 
 
 ### Before you start: Memory considerations on our hardware
