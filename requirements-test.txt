@@ -1,0 +1,7 @@
+pytest
+pyyaml
+requests
+biopython
+numpy
+pandas
+plotly

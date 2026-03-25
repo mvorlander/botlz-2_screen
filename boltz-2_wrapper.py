@@ -430,7 +430,7 @@ def _header_token(header: str) -> str:
     parts = header.split("|")
     if len(parts) >= 3 and parts[0] in {"sp", "tr"}:
         return parts[1]
-    return re.split(r"[\\s|:_-]+", header, 1)[0]
+    return re.split(r"[\\s|:_-]+", header, maxsplit=1)[0]
 
 UNIPROT_FASTA_URL = "https://rest.uniprot.org/uniprotkb/{}.fasta"
 

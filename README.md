@@ -53,6 +53,18 @@ That script syncs the repo, builds a new Apptainer sandbox from
 built runtime. The screening wrappers use the Python environment already
 bundled inside that sandbox for host-side submission.
 
+## Testing
+
+The repository includes a pytest suite covering the wrapper's main modalities,
+screening dispatch, AF3 export, analysis aggregation, and PTM fetch helpers.
+
+```bash
+python3 -m venv .venv-test
+. .venv-test/bin/activate
+python -m pip install -r requirements-test.txt
+pytest -q
+```
+
 
 ### Before you start: Memory considerations on our hardware
 
