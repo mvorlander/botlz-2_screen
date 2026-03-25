@@ -9,7 +9,7 @@ _High‑throughput structure prediction and evaluation with `boltz-screen.sh`_
    * **`screen.txt`** – one target (UniProt ID / FASTA / CCD) per line  
 2. **Run the screen**  
    ```bash
-   boltz-screen.sh --bait bait.txt --screen screen.txt -c chain_mapping.txt -n my_screen
+   /resources/AF2_PPI_tools/boltz/boltz-screen.sh --bait bait.txt --screen screen.txt -c chain_mapping.txt -n my_screen
 
 ***
 
@@ -40,6 +40,14 @@ The intended `cbe` installation is:
 
 ```text
 /resources/AF2_PPI_tools/boltz
+```
+
+The shared entry points on `cbe` are:
+
+```text
+/resources/AF2_PPI_tools/boltz/boltz-screen.sh
+/resources/AF2_PPI_tools/boltz/boltz-analysis.sh
+/resources/AF2_PPI_tools/boltz/boltz-fetch-ptms.sh
 ```
 
 The reproducible cluster deployment command is:

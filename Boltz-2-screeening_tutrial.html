@@ -35,9 +35,11 @@
 <li><strong>Launches <code>boltz-analysis.sh</code></strong> afterwards to collate metrics, make plots and dashboards, and write ready‑made ChimeraX sessions.</li>
 </ol>
 <h2 id="script-path">Script path </h2>
-<p>The <a href="http://boltz-screen.sh">boltz-screen.sh</a> should be in your path variable (meaning, you can launch it from anywhere by typing <code>boltz-screen.sh</code>). If this does not work, execute this <strong>once</strong>:</p>
-<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>/groups/plaschka/shared/software/scripts/update_bashrc.sh
-</code></pre><p>Restart your terminal and try again.</p>
+<p>The shared install on <code>cbe</code> lives under <code>/resources/AF2_PPI_tools/boltz</code>. You can either add that directory to your <code>PATH</code> or call the wrappers directly:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>/resources/AF2_PPI_tools/boltz/boltz-screen.sh
+/resources/AF2_PPI_tools/boltz/boltz-analysis.sh
+/resources/AF2_PPI_tools/boltz/boltz-fetch-ptms.sh
+</code></pre><p>All users on the cluster can read this location.</p>
 <hr>
 <h2 id="overview">Overview </h2>
 <p>The screen allows you to predict a single bait complex against many targets. The bait complex may contain multiple components such as proteins, nucleic acids, ligands, and ions.  You need to provide minimally two files:</p>
