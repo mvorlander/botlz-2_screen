@@ -363,12 +363,18 @@ def gpu_and_flags(residues: int, chains: int, ligands: int, mods: int):
     recycles = _par("--recycling_steps", 3)
 
     # ---------- crude VRAM estimator (good ±15 %) ----------------------
+    #
+    # Peak VRAM is driven mostly by system size. Sampling steps mainly affect
+    # wall-clock time because the same activations are reused across the
+    # diffusion trajectory, so we must not scale VRAM linearly with
+    # --sampling_steps. Recycling can increase memory pressure a bit, but not
+    # in a simple one-to-one way either, so we use only a mild penalty.
     est_vram_gb = (
         0.0000035 * residues ** 2 +
         0.015 * residues +
         0.5 * ligands +
         2
-    ) * (steps / 100) * (recycles / 3)
+    ) * (1 + max(recycles - 3, 0) * 0.08)
 
     # ---------- pick smallest GPU that fits ---------------------------
     if est_vram_gb <= _GPU_CAPACITY["g1"] - _SAFETY_MARGIN_GB:
