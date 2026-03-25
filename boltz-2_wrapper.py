@@ -144,7 +144,7 @@ Example 3 – protein + RNA + bait versus different ligands
 ---------------------------------------------------------------------------
 """
 
-import argparse, io, pathlib, re, shlex, shutil, subprocess, sys, tempfile, textwrap, time
+import argparse, io, os, pathlib, re, shlex, shutil, subprocess, sys, tempfile, textwrap, time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import yaml, requests
 from requests.exceptions import RequestException
@@ -163,7 +163,38 @@ def _clean_seq(seq: str) -> str:
 # Absolute directory where this wrapper script resides.
 # Lets us reference boltz_analysis.py regardless of CWD.
 # ------------------------------------------------------------------
-WRAPPER_DIR = pathlib.Path(__file__).resolve().parent# 
+WRAPPER_DIR = pathlib.Path(__file__).resolve().parent
+INSTALL_ROOT = WRAPPER_DIR.parent
+CONTAINER_IMAGE = pathlib.Path(
+    os.environ.get(
+        "BOLTZ_APPTAINER_IMAGE",
+        str(INSTALL_ROOT / "containers" / "current"),
+    )
+)
+CONTAINER_SITEPKGS = pathlib.Path(
+    os.environ.get(
+        "BOLTZ_CONTAINER_SITEPKGS",
+        str(INSTALL_ROOT / "sitepkgs_bundle"),
+    )
+)
+
+
+def _container_pythonpath() -> str:
+    parts = []
+    if CONTAINER_SITEPKGS.exists():
+        parts.append(str(CONTAINER_SITEPKGS))
+    current = os.environ.get("PYTHONPATH")
+    if current:
+        parts.append(current)
+    return ":".join(parts)
+
+
+def _apptainer_env() -> dict[str, str]:
+    env = os.environ.copy()
+    pythonpath = _container_pythonpath()
+    if pythonpath:
+        env["APPTAINERENV_PYTHONPATH"] = pythonpath
+    return env
 #--------------------------------------------------------------------------- #
 # Helpers                                                                     #
 # --------------------------------------------------------------------------- #
@@ -302,10 +333,8 @@ def gpu_and_flags(residues: int, chains: int, ligands: int, mods: int):
         flags += ["--sampling_steps", "40"]
     elif residues >= 1800 or chains >= 4:
         flags += ["--sampling_steps", "60"]
-    if ligands:
-        flags += ["--no_kernels"]
     if mods >= 20:
-        flags += ["--recycles", "1"]
+        flags += ["--recycling_steps", "1"]
 
     # helpers to read our own override back
     def _par(opt: str, default: int) -> int:
@@ -313,8 +342,8 @@ def gpu_and_flags(residues: int, chains: int, ligands: int, mods: int):
             return int(flags[flags.index(opt) + 1])
         except ValueError:
             return default
-    steps    = _par("--sampling_steps", 100)
-    recycles = _par("--recycles", 3)
+    steps    = _par("--sampling_steps", 200)
+    recycles = _par("--recycling_steps", 3)
 
     # ---------- crude VRAM estimator (good ±15 %) ----------------------
     est_vram_gb = (
@@ -763,9 +792,15 @@ echo "Out   : $OUTDIR"
 
 mkdir -p "$OUTDIR"
 
+export BOLTZ_APPTAINER_IMAGE="${BOLTZ_APPTAINER_IMAGE:-__IMAGE__}"
+export BOLTZ_CONTAINER_SITEPKGS="${BOLTZ_CONTAINER_SITEPKGS:-__SITEPKGS__}"
+if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
+  export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${PYTHONPATH:+:$PYTHONPATH}"
+fi
+
 apptainer exec --nv \\
   --bind "$INPUT:$INPUT" \\
-  /groups/plaschka/shared/software/boltz-2/boltz2:develop \\
+  "$BOLTZ_APPTAINER_IMAGE" \\
   boltz predict "$INPUT" \\
         --out_dir "$OUTDIR" \\
         --accelerator gpu \\
@@ -816,8 +851,14 @@ echo "yaml  : $YAML"
 echo "outdir: $OUTDIR"
 echo "flags : $FLAGS"
 
+export BOLTZ_APPTAINER_IMAGE="${BOLTZ_APPTAINER_IMAGE:-__IMAGE__}"
+export BOLTZ_CONTAINER_SITEPKGS="${BOLTZ_CONTAINER_SITEPKGS:-__SITEPKGS__}"
+if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
+  export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${PYTHONPATH:+:$PYTHONPATH}"
+fi
+
 apptainer exec --nv --bind "$YAML:$YAML" \\
-  /groups/plaschka/shared/software/boltz-2/boltz2:develop \\
+  "$BOLTZ_APPTAINER_IMAGE" \\
   boltz predict "$YAML" \\
         --out_dir "$OUTDIR" \\
         --accelerator gpu \\
@@ -843,8 +884,14 @@ ANALYSIS_TEMPLATE = """#!/bin/bash
 #SBATCH --mem=4G
 #SBATCH --dependency=afterok:{array_id}
 
-module purge
-python {wrapper_dir}/boltz_analysis.py {root} --no-labels {chain_flag}
+export BOLTZ_APPTAINER_IMAGE="${BOLTZ_APPTAINER_IMAGE:-__IMAGE__}"
+export BOLTZ_CONTAINER_SITEPKGS="${BOLTZ_CONTAINER_SITEPKGS:-__SITEPKGS__}"
+if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
+  export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${PYTHONPATH:+:$PYTHONPATH}"
+fi
+
+apptainer exec "$BOLTZ_APPTAINER_IMAGE" \\
+  python {wrapper_dir}/boltz_analysis.py {root} --no-labels {chain_flag}
 """
 
 def write_slurm(job: str, yaml_path: pathlib.Path, outdir: pathlib.Path, flags: str, mem_req: str, part: str, constraint: str) -> pathlib.Path:
@@ -852,6 +899,8 @@ def write_slurm(job: str, yaml_path: pathlib.Path, outdir: pathlib.Path, flags: 
     script_txt = script_txt.replace("__MEM__", mem_req).replace("__PART__", part)
     script_txt = script_txt.replace("__CONSTRAINT__", constraint)
     script_txt = script_txt.replace("__OUTDIR__", str(outdir))
+    script_txt = script_txt.replace("__IMAGE__", str(CONTAINER_IMAGE))
+    script_txt = script_txt.replace("__SITEPKGS__", str(CONTAINER_SITEPKGS))
     script_path = outdir / f"{job}.slurm"
     with open(script_path, "w") as fh:
         fh.write(script_txt)
@@ -1120,7 +1169,10 @@ def main():
         constraint = jobs_list[0][4] if jobs_list else "g4|g3|g2|g1"
         array_slurm = root_out / "array.slurm"
         array_slurm.write_text(ARRAY_TEMPLATE.format(
-            root=str(root_out), n=len(jobs_list), mem=f"{max_mem}M").replace("__CONSTRAINT__", constraint))
+            root=str(root_out), n=len(jobs_list), mem=f"{max_mem}M")
+            .replace("__CONSTRAINT__", constraint)
+            .replace("__IMAGE__", str(CONTAINER_IMAGE))
+            .replace("__SITEPKGS__", str(CONTAINER_SITEPKGS)))
 
         # submit array and capture ID
         res = subprocess.run(["sbatch", str(array_slurm)],
@@ -1139,6 +1191,8 @@ def main():
             wrapper_dir=WRAPPER_DIR,
             chain_flag=chain_flag
         )
+        ana_script = ana_script.replace("__IMAGE__", str(CONTAINER_IMAGE))
+        ana_script = ana_script.replace("__SITEPKGS__", str(CONTAINER_SITEPKGS))
 
         analysis_slurm.write_text(ana_script)
         subprocess.run(["sbatch", str(analysis_slurm)], check=True)
@@ -1229,14 +1283,14 @@ def run_local(yaml_path: pathlib.Path, outdir: pathlib.Path, flags: list[str]) -
     cmd = [
         "apptainer", "exec", "--nv",
         "--bind", f"{yaml_path}:{yaml_path}",
-        "/groups/plaschka/shared/software/boltz-2/boltz2:develop",
+        str(CONTAINER_IMAGE),
         "boltz", "predict", str(yaml_path),
         "--out_dir", str(outdir),
         "--accelerator", "gpu",
         "--use_msa_server", *flags
     ]
     print("Running:", " ".join(shlex.quote(c) for c in cmd))
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, env=_apptainer_env())
 
 if __name__ == "__main__":
     main()

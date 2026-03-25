@@ -20,6 +20,32 @@ _High‑throughput structure prediction and evaluation with `boltz-screen.sh`_
 3.  **Copies every prediction’s output** into a clean `results/<JOB_NAME>/…` folder and keeps all Slurm logs in `slurm/`.
 4.  **Launches `boltz-analysis.sh`** afterwards to collate metrics, make plots and dashboards, and write ready‑made ChimeraX sessions.
 
+## Containerized deployment
+
+This repository now includes a fully containerized launcher stack:
+
+- `boltz-screen.sh`
+- `boltz-analysis.sh`
+- `boltz-fetch-ptms.sh`
+
+All three wrappers run the Python tools through Apptainer and default to a
+shared container target at `containers/current`. The intended `cbe`
+installation is:
+
+```text
+/resources/AF2_PPI_tools/boltz
+```
+
+The reproducible cluster deployment command is:
+
+```bash
+./scripts/deploy_cbe.sh /resources/AF2_PPI_tools/boltz
+```
+
+That script syncs the repo, builds a new Apptainer sandbox from
+`containers/boltz_screen.def`, and points `containers/current` at the freshly
+built runtime.
+
 
 ### Before you start: Memory considerations on our hardware
 
@@ -28,7 +54,7 @@ The script tries to allocate appropriate GPU and host RAM for each job based on 
 | Input composition (single prediction) | Typical VRAM on GPU card A100-40 GB¹ | When it all fits |
 | --- | --- | --- |
 | **Protein-only**  
-≤ 1,000 residues, default `sampling_steps=100`, `recycles=3` | 28-35 GB | A100-40 GB OK |
+≤ 1,000 residues, default `sampling_steps=200`, `recycling_steps=3` | 28-35 GB | A100-40 GB OK |
 | **Protein + RNA** (two polymer chains, total ~1,200 nt/aa) | 34-40 GB | A100-40 GB borderline → often OOM; A100-80 GB or H100 advised |
 | **Protein/RNA + ≤ 4 ligands/ions** | +0.4-0.6 GB per CCD| still fits if base system < 34 GB |
 | **\> >1.5 k total residues** | 40-70 GB | Needs A100-80 GB (g4) or H100-80 GB, which aren't available on our cluster |
@@ -145,7 +171,7 @@ Q13838 38:SEP   # Screen target 2 (Ser-38 phosphorylated)
 ```bash
 boltz-screen.sh --bait bait.txt \
                      --screen screen.txt \
-                     --chain_mapping chain_mapping.txt \
+                     --chain_map chain_mapping.txt \
                      -n MyScreenName
 ```
 
@@ -226,7 +252,7 @@ AMP
 ```bash
 boltz-screen.sh --bait bait_combo.list \
                      --screen screen_proteins.txt \
-                     --chain_mapping chain_mapping.txt \
+                     --chain_map chain_mapping.txt \
                      -n lig_screen
 ```
 
@@ -414,16 +440,16 @@ These supplementary metrics can be plotted or referenced if you enable **all-plo
 | --- | --- |
 | **Can I screen ligand libraries?** | Yes – put each CCD code or SMILES line in `--screen`. |
 | **Do I need MSAs for RNA/DNA?** | No – MSA slots are ignored for nucleic acids. |
-| **Can I resume a failed screen?** | Re‑run the same command; existing `results/*/confidence_*.json` folders are skipped automatically. |
+| **Can I resume a failed screen?** | Re‑run the same command into the same output directory only after checking the existing results manually; automatic skip/resume is not currently guaranteed by the wrapper. |
 | **Can start the analysis manually** | Yes, you can run `boltz-analysis.sh <screen_dir> -c chain_map.txt ` ' |
 | **Why are some predictions filtered out before they are even submitted** | boltz-2 needs a lot of memory for large predictions, and in order not to waste resourced the wrapper script won't submit predictions that will certainly fail on our hardware. (see memory consideration section  )` ' |
 
 
 
-## 7. Using `boltz_fetch_ptm.py` to generate inline‑PTM syntax  
+## 7. Using `boltz_fetch_ptms.py` to generate inline‑PTM syntax  
 _Batch retrieval of curated phosphorylation, acetylation, SUMO, ubiquitin & more_
 
-The helper script **`boltz_fetch_ptm.py`** queries the UniProt/EBI PTM API and
+The helper script **`boltz_fetch_ptms.py`** queries the UniProt/EBI PTM API and
 writes two tab‑separated files:
 
 | Column in `<output>.tsv`            | Description                                                  |
@@ -438,13 +464,13 @@ filtering.
 
 ```bash
 # All curated PTMs for one entry
-boltz_fetch_ptm.py Q13838 --verbose
+boltz_fetch_ptms.py Q13838 --verbose
 
 # Batch mode: multiple IDs *and* keyword filter (phospho + acetyl only)
-boltz_fetch_ptm.py Q13838,P05067 -t phospho acetyl -o ptms.tsv
+boltz_fetch_ptms.py Q13838,P05067 -t phospho acetyl -o ptms.tsv
 
 # From file + filter for SUMO / ubiquitin + limit per protein
-boltz_fetch_ptm.py -f my_ids.txt -t sumo ubiquitin -n 100
+boltz_fetch_ptms.py -f my_ids.txt -t sumo ubiquitin -n 100
 ```
 
 Common keyword filters (`-t`) include:
@@ -463,7 +489,7 @@ Common keyword filters (`-t`) include:
 
 **Workflow tip**
 
-1. `boltz_fetch_ptm.py Q13838 -t phospho` → produces `ptms.boltz.txt`
+1. `boltz_fetch_ptms.py Q13838 -t phospho` → produces `ptms.boltz.txt`
 2. Concatenate into your screen list:  
    `cat ptms.boltz.txt >> screen.txt`
 3. Run `boltz-screen.sh` normally – inline PTM syntax is handled automatically.

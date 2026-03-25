@@ -1,0 +1,15 @@
+Bootstrap: localimage
+From: /groups/plaschka/shared/software/boltz-2/boltz2:develop
+
+%labels
+    Author Matthias Vorlaender
+    Description Boltz screen runtime with analysis extras baked into the image
+
+%post
+    python -m pip install --no-cache-dir plotly==6.6.0 kaleido
+
+%test
+    python - <<'PY'
+import plotly, plotly.express, kaleido
+print(plotly.__version__)
+PY
