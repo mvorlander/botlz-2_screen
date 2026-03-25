@@ -146,11 +146,6 @@ Example 3 – protein + RNA + bait versus different ligands
 
 import argparse, io, os, pathlib, re, shlex, shutil, subprocess, sys, tempfile, textwrap, time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import yaml, requests
-from requests.exceptions import RequestException
-from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 from datetime import datetime
 import json       # ← add this line
 import re   # already imported once, keep only one import
@@ -195,6 +190,24 @@ def _apptainer_env() -> dict[str, str]:
     if pythonpath:
         env["APPTAINERENV_PYTHONPATH"] = pythonpath
     return env
+
+
+def _yaml():
+    import yaml
+    return yaml
+
+
+def _requests():
+    import requests
+    from requests.exceptions import RequestException
+    return requests, RequestException
+
+
+def _bio():
+    from Bio import SeqIO
+    from Bio.Seq import Seq
+    from Bio.SeqRecord import SeqRecord
+    return SeqIO, Seq, SeqRecord
 #--------------------------------------------------------------------------- #
 # Helpers                                                                     #
 # --------------------------------------------------------------------------- #
@@ -276,6 +289,8 @@ def load_chain_map(path: pathlib.Path | None) -> dict[str, str]:
     return mapping
 
 def total_residues(path: pathlib.Path) -> int:
+    yaml = _yaml()
+    SeqIO, _, _ = _bio()
     if path.suffix.lower() in {".yml", ".yaml"}:
         doc = yaml.safe_load(path.read_text())
         return sum(len(ent["sequence"])
@@ -286,6 +301,7 @@ def total_residues(path: pathlib.Path) -> int:
 
 def count_ligands(yaml_path: pathlib.Path) -> int:
     """Return number of ligand / ion entries in a Boltz YAML."""
+    yaml = _yaml()
     if yaml_path.suffix.lower() not in {".yml", ".yaml"}:
         return 0
     doc = yaml.safe_load(yaml_path.read_text())
@@ -297,6 +313,7 @@ def count_ligands(yaml_path: pathlib.Path) -> int:
 # --------------------------------------------------------------------------- #
 def yaml_stats(yaml_path: pathlib.Path) -> dict[str, int]:
     """Return basic counts used for memory / GPU heuristics."""
+    yaml = _yaml()
     stats = dict(residues=0, chains=0, ligands=0, mods=0)
     if yaml_path.suffix.lower() not in {".yml", ".yaml"}:
         return stats
@@ -413,6 +430,7 @@ UNIPROT_FASTA_URL = "https://rest.uniprot.org/uniprotkb/{}.fasta"
 
 def _fetch_single(uid: str, timeout: int):
     """Return (uid, text_or_None) for a single UniProt ID."""
+    requests, RequestException = _requests()
     try:
         r = requests.get(UNIPROT_FASTA_URL.format(uid), timeout=timeout)
         if r.ok:
@@ -425,6 +443,7 @@ def _records_from_uniprot(ids, *, timeout: int = 10, retries: int = 2, workers: 
     """
     Parallel download of UniProt FASTA records with progress, timeout and retry.
     """
+    SeqIO, _, _ = _bio()
     ids = [uid.strip() for uid in ids if uid.strip()]
     if not ids:
         return
@@ -486,6 +505,8 @@ def make_yaml(src: str,
     Build YAML from mixed inputs: UniProt IDs, FASTA files, or a single YAML.
     Multiple items can be comma- or whitespace‑separated.
     """
+    SeqIO, Seq, SeqRecord = _bio()
+    yaml = _yaml()
     # If the string contains a comma / whitespace it is surely a mixed token list
     if re.search(r"[,\s]", src):
         tokens = re.split(r"[,\s]+", src.strip())
@@ -989,6 +1010,7 @@ def _safe_name(token: str, maxlen: int = 15) -> str:
     return re.sub(r'[^A-Za-z0-9]+', '_', token)[:maxlen] or "X"
 
 def main():
+    yaml = _yaml()
     ap = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                  description=textwrap.dedent(__doc__))
     ap.add_argument("input", nargs="?", help="FASTA / YAML / UniProt IDs (omit when using --screen)")
@@ -1156,6 +1178,11 @@ def main():
             jobs_list.append((yaml_dst, sub_out, flags_str, mem_req, constraint))
         if args.local:
             print("✅  All screening targets were run locally – no Slurm submission.")
+            print(f"📂  AF3_JSON hub: {(root_out / 'AF3_JSON').resolve()}")
+            return
+        if not jobs_list:
+            print("⚠  No screening jobs were submitted.")
+            print(f"📄  See {(root_out / 'skipped_jobs.txt').resolve()} for skipped targets.")
             print(f"📂  AF3_JSON hub: {(root_out / 'AF3_JSON').resolve()}")
             return
         # ---------------- write jobs.list --------------------------------
