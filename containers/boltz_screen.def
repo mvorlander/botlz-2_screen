@@ -1,5 +1,5 @@
 Bootstrap: localimage
-From: /groups/plaschka/shared/software/boltz-2/boltz2:develop
+From: /resources/AF2_PPI_tools/boltz/containers/boltz_screen_base
 
 %labels
     Author Matthias Vorlaender

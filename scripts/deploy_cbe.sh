@@ -2,7 +2,7 @@
 set -euo pipefail
 
 TARGET_ROOT="${1:-/resources/AF2_PPI_tools/boltz}"
-BASE_IMAGE="${BASE_IMAGE:-/groups/plaschka/shared/software/boltz-2/boltz2:develop}"
+BASE_IMAGE="${BASE_IMAGE:-$TARGET_ROOT/containers/boltz_screen_base}"
 
 mkdir -p "$TARGET_ROOT"
 rsync -av --delete \
@@ -11,6 +11,16 @@ rsync -av --delete \
   ./ "$TARGET_ROOT/"
 
 mkdir -p "$TARGET_ROOT/containers"
+
+if [ ! -e "$BASE_IMAGE" ]; then
+  if [ -d "$TARGET_ROOT/containers/current" ] || [ -f "$TARGET_ROOT/containers/current" ]; then
+    cp -a "$TARGET_ROOT/containers/current" "$BASE_IMAGE"
+  else
+    echo "Base image not found: $BASE_IMAGE" >&2
+    echo "Set BASE_IMAGE explicitly for the first deployment." >&2
+    exit 1
+  fi
+fi
 
 sed "s|^From: .*|From: $BASE_IMAGE|" \
   "$TARGET_ROOT/containers/boltz_screen.def" > "$TARGET_ROOT/containers/boltz_screen.cbe.def"
