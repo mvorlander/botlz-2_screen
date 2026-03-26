@@ -173,6 +173,10 @@ CONTAINER_SITEPKGS = pathlib.Path(
         str(INSTALL_ROOT / "sitepkgs_bundle"),
     )
 )
+CONTAINER_BIN_DIR = os.environ.get(
+    "BOLTZ_CONTAINER_BIN_DIR",
+    "/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin",
+)
 
 
 def _container_pythonpath() -> str:
@@ -829,10 +833,8 @@ fi
 apptainer exec --cleanenv --nv \\
   --bind "$INPUT:$INPUT" \\
   "$BOLTZ_APPTAINER_IMAGE" \\
-  boltz predict "$INPUT" \\
-        --out_dir "$OUTDIR" \\
-        --accelerator gpu \\
-        --use_msa_server $EXTRA
+  /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec boltz predict "$1" --out_dir "$2" --accelerator gpu --use_msa_server ${{3:-}}' \\
+  _ "$INPUT" "$OUTDIR" "$EXTRA"
 # ------------------------------------------------------------------
 # Flatten output – move boltz_results_* one level up
 # ------------------------------------------------------------------
@@ -887,10 +889,8 @@ fi
 
 apptainer exec --cleanenv --nv --bind "$YAML:$YAML" \\
   "$BOLTZ_APPTAINER_IMAGE" \\
-  boltz predict "$YAML" \\
-        --out_dir "$OUTDIR" \\
-        --accelerator gpu \\
-        --use_msa_server $FLAGS
+  /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec boltz predict "$1" --out_dir "$2" --accelerator gpu --use_msa_server ${{3:-}}' \\
+  _ "$YAML" "$OUTDIR" "$FLAGS"
         
 # ------------------------------------------------------------------
 # Flatten output – move boltz_results_* one level up
@@ -929,6 +929,7 @@ def write_slurm(job: str, yaml_path: pathlib.Path, outdir: pathlib.Path, flags: 
     script_txt = script_txt.replace("__OUTDIR__", str(outdir))
     script_txt = script_txt.replace("__IMAGE__", str(CONTAINER_IMAGE))
     script_txt = script_txt.replace("__SITEPKGS__", str(CONTAINER_SITEPKGS))
+    script_txt = script_txt.replace("__BIN_DIR__", CONTAINER_BIN_DIR)
     script_path = outdir / f"{job}.slurm"
     with open(script_path, "w") as fh:
         fh.write(script_txt)
@@ -1207,7 +1208,8 @@ def main():
             root=str(root_out), job_name=job_name, n=len(jobs_list), mem=f"{max_mem}M")
             .replace("__CONSTRAINT__", constraint)
             .replace("__IMAGE__", str(CONTAINER_IMAGE))
-            .replace("__SITEPKGS__", str(CONTAINER_SITEPKGS)))
+            .replace("__SITEPKGS__", str(CONTAINER_SITEPKGS))
+            .replace("__BIN_DIR__", CONTAINER_BIN_DIR))
 
         analysis_slurm = root_out / "analysis.slurm"
         chain_flag = f"--chain-map {args.chain_map}" if args.chain_map else ""
@@ -1336,10 +1338,9 @@ def run_local(yaml_path: pathlib.Path, outdir: pathlib.Path, flags: list[str]) -
         "apptainer", "exec", "--nv",
         "--bind", f"{yaml_path}:{yaml_path}",
         str(CONTAINER_IMAGE),
-        "boltz", "predict", str(yaml_path),
-        "--out_dir", str(outdir),
-        "--accelerator", "gpu",
-        "--use_msa_server", *flags
+        "/bin/bash", "--noprofile", "--norc", "-lc",
+        f'export PATH="{CONTAINER_BIN_DIR}:$PATH"; exec boltz predict "$1" --out_dir "$2" --accelerator gpu --use_msa_server ${{3:-}}',
+        "_", str(yaml_path), str(outdir), " ".join(flags)
     ]
     print("Running:", " ".join(shlex.quote(c) for c in cmd))
     subprocess.run(cmd, check=True, env=_apptainer_env())
