@@ -10,8 +10,7 @@ _High‑throughput structure prediction and evaluation with `boltz-screen.sh`_
 2. **Run the screen**  
    ```bash
    /resources/AF2_PPI_tools/boltz/boltz-screen.sh --bait bait.txt --screen screen.txt -c chain_mapping.txt -n my_screen
-
-***
+   ```
 
 `boltz-screen.sh` automates the entire workflow of predicting many _targets_ against one or more _bait_ entities. The script:
 
