@@ -404,6 +404,28 @@ def gpu_and_flags(residues: int, chains: int, ligands: int, mods: int):
         "g4": "g4",
     }
     return constraint_map[gpu], f"{host_mem_mb}M", flags, est_vram_gb
+
+
+def array_constraint(job_constraints: list[str]) -> str:
+    """
+    Pick one Slurm constraint that is valid for every job in an array.
+
+    The per-job heuristic emits a pipe-delimited list of acceptable GPU classes.
+    For arrays we must intersect those sets; otherwise a later job can land on a
+    node class that was only valid for the first entry.
+    """
+    if not job_constraints:
+        return "g4|g3|g2|g1"
+
+    ordered = ["g4", "g2", "g3", "g1"]
+    allowed = set(ordered)
+    for constraint in job_constraints:
+        allowed &= {part.strip() for part in constraint.split("|") if part.strip()}
+
+    if not allowed:
+        return "g4"
+
+    return "|".join(gpu for gpu in ordered if gpu in allowed)
     
 # --------------------------------------------------------------------------- #
 # Sequence classification helper                                              #
@@ -1200,8 +1222,7 @@ def main():
                 fh.write(f"{y}\t{d}\t{f}\t{m}\t{c}\n")
 
         max_mem = max(int(m[:-1]) for *_, m, _ in jobs_list)  # strip 'M'
-        # Use the constraint of the first job (all jobs should use the same heuristic)
-        constraint = jobs_list[0][4] if jobs_list else "g4|g3|g2|g1"
+        constraint = array_constraint([constraint for *_, constraint in jobs_list])
         array_slurm = root_out / "array.slurm"
         job_name = root_out.name
         array_slurm.write_text(ARRAY_TEMPLATE.format(
