@@ -20,6 +20,9 @@ _High‑throughput structure prediction and evaluation with `boltz-screen.sh`_
 3.  **Copies every prediction’s output** into a clean `results/<JOB_NAME>/…` folder and keeps all Slurm logs in `slurm/`.
 4.  **Launches `boltz-analysis.sh`** afterwards to collate metrics, make plots and dashboards, and write ready‑made ChimeraX sessions.
 
+<details>
+<summary><strong>For Maintainers: Deployment and Testing</strong></summary>
+
 ## Containerized deployment
 
 This repository now includes a shared Apptainer runtime plus lightweight host
@@ -72,6 +75,8 @@ python3 -m venv .venv-test
 python -m pip install -r requirements-test.txt
 pytest -q
 ```
+
+</details>
 
 
 ### Before you start: Memory considerations on our hardware
