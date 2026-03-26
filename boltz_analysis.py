@@ -706,6 +706,11 @@ def plot_interactive_scatter(df: pd.DataFrame,
     c0 = _pick(init_color, 2)
     s0 = _pick(init_size, 3)
 
+    def _active_idx(col: str | None) -> int:
+        if col in numeric_cols:
+            return numeric_cols.index(col)
+        return 0
+
     fig = go.Figure()
 
     if s0:
@@ -768,22 +773,24 @@ def plot_interactive_scatter(df: pd.DataFrame,
     fig.update_layout(
         updatemenus=[
             dict(buttons=make_buttons("x"), direction="down", x=0.00, y=1.2,
-                pad={"r": 8, "t": 10}, showactive=True, bgcolor="white",
+                pad={"r": 8, "t": 10}, showactive=True, active=_active_idx(x0), bgcolor="white",
                 font=dict(size=11), xanchor="left"),
             dict(buttons=make_buttons("y"), direction="down", x=0.12, y=1.2,
-                pad={"r": 8, "t": 10}, showactive=True, bgcolor="white",
+                pad={"r": 8, "t": 10}, showactive=True, active=_active_idx(y0), bgcolor="white",
                 font=dict(size=11), xanchor="left"),
             dict(buttons=make_buttons("c"), direction="down", x=0.24, y=1.2,
-                pad={"r": 8, "t": 10}, showactive=True, bgcolor="white",
+                pad={"r": 8, "t": 10}, showactive=True, active=_active_idx(c0), bgcolor="white",
                 font=dict(size=11), xanchor="left"),
             dict(buttons=make_buttons("s"), direction="down", x=0.36, y=1.2,
-                pad={"r": 8, "t": 10}, showactive=True, bgcolor="white",
+                pad={"r": 8, "t": 10}, showactive=True, active=_active_idx(s0), bgcolor="white",
                 font=dict(size=11), xanchor="left"),
         ],
         annotations=[
             dict(text="X:", x=-0.04, y=1.2, xref="paper", yref="paper",
                  showarrow=False, font=dict(size=12)),
             dict(text="Y:", x=0.08, y=1.2, xref="paper", yref="paper",
+                 showarrow=False, font=dict(size=12)),
+            dict(text="Color:", x=0.19, y=1.2, xref="paper", yref="paper",
                  showarrow=False, font=dict(size=12)),
             dict(text="Size:", x=0.32, y=1.2, xref="paper", yref="paper",
                 showarrow=False, font=dict(size=12)),

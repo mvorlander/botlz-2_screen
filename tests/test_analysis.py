@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import pathlib
 
 import numpy as np
 import pandas as pd
@@ -75,3 +76,41 @@ def test_analysis_main_writes_summary_and_handles_failed_jobs(tmp_path, monkeypa
     assert (root / "analytics" / "slurm_metrics.csv").is_file()
     assert (root / "plots").is_dir()
     assert (ok_dir / "CHIMERAX_001_demo_Q1_analysis.cxc").is_file()
+
+
+def test_scatter_dashboard_respects_initial_dropdown_state(tmp_path, analysis_mod):
+    df = pd.DataFrame(
+        {
+            "job": ["a", "b"],
+            "status": ["ok", "ok"],
+            "confidence_score": [0.9, 0.8],
+            "complex_plddt": [0.7, 0.6],
+            "complex_iplddt": [0.5, 0.4],
+            "iptm_screen_vs_bait": [0.3, 0.2],
+            "hover_label": ["a", "b"],
+        }
+    )
+
+    captured = {}
+
+    def fake_save(fig, path, png_scale=2):
+        captured["fig"] = fig
+        pathlib.Path(path).write_text("stub")
+
+    analysis_mod._save = fake_save
+    out = tmp_path / "scatter.html"
+    analysis_mod.plot_interactive_scatter(
+        df,
+        out,
+        init_x="confidence_score",
+        init_y="complex_plddt",
+        init_color="complex_iplddt",
+        init_size="iptm_screen_vs_bait",
+    )
+
+    fig = captured["fig"]
+    menus = fig.layout.updatemenus
+    assert menus[0].active == 0
+    assert menus[1].active == 1
+    assert menus[2].active == 2
+    assert menus[3].active == 3
