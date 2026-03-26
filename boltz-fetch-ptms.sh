@@ -8,12 +8,11 @@ if [ -e "$DEFAULT_IMAGE" ]; then
 fi
 export BOLTZ_APPTAINER_IMAGE="${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}"
 export BOLTZ_CONTAINER_SITEPKGS="${BOLTZ_CONTAINER_SITEPKGS:-$ROOT_DIR/sitepkgs_bundle}"
-export BOLTZ_HOST_PYTHON="${BOLTZ_HOST_PYTHON:-$ROOT_DIR/containers/current/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python}"
 
-if [ ! -x "$BOLTZ_HOST_PYTHON" ]; then
-  echo "Host Python not found: $BOLTZ_HOST_PYTHON" >&2
-  echo "Expected bundled runtime inside $ROOT_DIR/containers/current" >&2
+if [ ! -e "$BOLTZ_APPTAINER_IMAGE" ]; then
+  echo "Container image not found: $BOLTZ_APPTAINER_IMAGE" >&2
   exit 1
 fi
 
-exec "$BOLTZ_HOST_PYTHON" "$ROOT_DIR/boltz_fetch_ptms.py" "$@"
+exec apptainer exec --cleanenv "$BOLTZ_APPTAINER_IMAGE" \
+  python "$ROOT_DIR/boltz_fetch_ptms.py" "$@"

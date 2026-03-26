@@ -826,7 +826,7 @@ if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${{PYTHONPATH:+:$PYTHONPATH}}"
 fi
 
-apptainer exec --nv \\
+apptainer exec --cleanenv --nv \\
   --bind "$INPUT:$INPUT" \\
   "$BOLTZ_APPTAINER_IMAGE" \\
   boltz predict "$INPUT" \\
@@ -885,7 +885,7 @@ if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${{PYTHONPATH:+:$PYTHONPATH}}"
 fi
 
-apptainer exec --nv --bind "$YAML:$YAML" \\
+apptainer exec --cleanenv --nv --bind "$YAML:$YAML" \\
   "$BOLTZ_APPTAINER_IMAGE" \\
   boltz predict "$YAML" \\
         --out_dir "$OUTDIR" \\
@@ -918,7 +918,7 @@ if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${{PYTHONPATH:+:$PYTHONPATH}}"
 fi
 
-apptainer exec "$BOLTZ_APPTAINER_IMAGE" \\
+apptainer exec --cleanenv "$BOLTZ_APPTAINER_IMAGE" \\
   python {wrapper_dir}/boltz_analysis.py {root} --no-labels {chain_flag}
 """
 
@@ -1209,21 +1209,12 @@ def main():
             .replace("__IMAGE__", str(CONTAINER_IMAGE))
             .replace("__SITEPKGS__", str(CONTAINER_SITEPKGS)))
 
-        # submit array and capture ID
-        res = subprocess.run(["sbatch", str(array_slurm)],
-                             check=True, capture_output=True, text=True)
-        array_id = res.stdout.strip().split()[-1]
-        print(f"🗄  array job {array_id} ({len(jobs_list)} tasks)")
-
-        # analysis job
-        # ----- analysis job -------------------------------------------------
         analysis_slurm = root_out / "analysis.slurm"
-        wrapper_dir = pathlib.Path(__file__).parent
         chain_flag = f"--chain-map {args.chain_map}" if args.chain_map else ""
         ana_script = ANALYSIS_TEMPLATE.format(
             root=str(root_out),
             job_name=job_name,
-            array_id=array_id,
+            array_id="__ARRAY_ID__",
             wrapper_dir=WRAPPER_DIR,
             chain_flag=chain_flag
         )
@@ -1231,6 +1222,31 @@ def main():
         ana_script = ana_script.replace("__SITEPKGS__", str(CONTAINER_SITEPKGS))
 
         analysis_slurm.write_text(ana_script)
+
+        if os.environ.get("BOLTZ_PREPARE_ONLY") == "1":
+            dispatch_env = root_out / "dispatch.env"
+            dispatch_env.write_text(
+                "\n".join([
+                    f"ROOT_OUT={shlex.quote(str(root_out))}",
+                    f"ARRAY_SLURM={shlex.quote(str(array_slurm))}",
+                    f"ANALYSIS_SLURM={shlex.quote(str(analysis_slurm))}",
+                    f"JOB_COUNT={len(jobs_list)}",
+                    "",
+                ])
+            )
+            print(f"📝  Dispatch metadata written: {dispatch_env}")
+            print(f"BOLTZ_DISPATCH_ENV={dispatch_env}")
+            print("✅  Screening preparation complete.")
+            return
+
+        # submit array and capture ID
+        res = subprocess.run(["sbatch", str(array_slurm)],
+                             check=True, capture_output=True, text=True)
+        array_id = res.stdout.strip().split()[-1]
+        print(f"🗄  array job {array_id} ({len(jobs_list)} tasks)")
+
+        # analysis job
+        analysis_slurm.write_text(analysis_slurm.read_text().replace("__ARRAY_ID__", array_id))
         subprocess.run(["sbatch", str(analysis_slurm)], check=True)
 
         print("✅  Screening dispatch complete.")

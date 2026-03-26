@@ -7,7 +7,7 @@ BUILD_ROOT="${BOLTZ_BUILD_ROOT:-$TARGET_ROOT/tmp/$USER}"
 APPTAINER_TMPDIR="${APPTAINER_TMPDIR:-$BUILD_ROOT/apptainer-tmp}"
 APPTAINER_CACHEDIR="${APPTAINER_CACHEDIR:-$BUILD_ROOT/apptainer-cache}"
 BUILD_TAG="${BOLTZ_BUILD_TAG:-$(date +%Y%m%d_%H%M%S)}"
-NEW_CONTAINER="$TARGET_ROOT/containers/boltz_screen_${BUILD_TAG}"
+NEW_CONTAINER="$TARGET_ROOT/containers/boltz_screen_${BUILD_TAG}.sif"
 
 mkdir -p "$TARGET_ROOT"
 rsync -av --delete \
@@ -32,11 +32,11 @@ fi
 sed "s|^From: .*|From: $BASE_IMAGE|" \
   "$TARGET_ROOT/containers/boltz_screen.def" > "$TARGET_ROOT/containers/boltz_screen.cbe.def"
 
-rm -rf "$NEW_CONTAINER"
+rm -f "$NEW_CONTAINER"
 TMPDIR="$APPTAINER_TMPDIR" \
 APPTAINER_TMPDIR="$APPTAINER_TMPDIR" \
 APPTAINER_CACHEDIR="$APPTAINER_CACHEDIR" \
-apptainer build --fakeroot --sandbox \
+apptainer build --fakeroot \
   "$NEW_CONTAINER" \
   "$TARGET_ROOT/containers/boltz_screen.cbe.def"
 
@@ -50,6 +50,5 @@ chmod +x \
 
 echo "Installed to $TARGET_ROOT"
 echo "Container target: $TARGET_ROOT/containers/current"
-echo "Host submission python: $TARGET_ROOT/containers/current/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python"
 echo "Apptainer temp dir: $APPTAINER_TMPDIR"
 echo "Apptainer cache dir: $APPTAINER_CACHEDIR"

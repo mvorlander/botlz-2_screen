@@ -8,12 +8,32 @@ if [ -e "$DEFAULT_IMAGE" ]; then
 fi
 export BOLTZ_APPTAINER_IMAGE="${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}"
 export BOLTZ_CONTAINER_SITEPKGS="${BOLTZ_CONTAINER_SITEPKGS:-$ROOT_DIR/sitepkgs_bundle}"
-export BOLTZ_HOST_PYTHON="${BOLTZ_HOST_PYTHON:-$ROOT_DIR/containers/current/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python}"
+TMP_LOG="$(mktemp "${TMPDIR:-/tmp}/boltz-screen.XXXXXX.log")"
+trap 'rm -f "$TMP_LOG"' EXIT
 
-if [ ! -x "$BOLTZ_HOST_PYTHON" ]; then
-  echo "Host Python not found: $BOLTZ_HOST_PYTHON" >&2
-  echo "Expected bundled runtime inside $ROOT_DIR/containers/current" >&2
+if [ ! -e "$BOLTZ_APPTAINER_IMAGE" ]; then
+  echo "Container image not found: $BOLTZ_APPTAINER_IMAGE" >&2
   exit 1
 fi
 
-exec "$BOLTZ_HOST_PYTHON" "$ROOT_DIR/boltz-2_wrapper.py" "$@"
+env BOLTZ_PREPARE_ONLY=1 \
+  apptainer exec --cleanenv "$BOLTZ_APPTAINER_IMAGE" \
+  python "$ROOT_DIR/boltz-2_wrapper.py" "$@" | tee "$TMP_LOG"
+
+DISPATCH_ENV="$(awk -F= '/^BOLTZ_DISPATCH_ENV=/{print $2}' "$TMP_LOG" | tail -n 1)"
+if [ -z "$DISPATCH_ENV" ]; then
+  exit 0
+fi
+
+# shellcheck disable=SC1090
+source "$DISPATCH_ENV"
+
+ARRAY_RES="$(sbatch "$ARRAY_SLURM")"
+ARRAY_ID="${ARRAY_RES##* }"
+echo "🗄  array job $ARRAY_ID (${JOB_COUNT} tasks)"
+
+ANALYSIS_SUBMIT="${ANALYSIS_SLURM%.slurm}.submit.slurm"
+sed "s/__ARRAY_ID__/$ARRAY_ID/g" "$ANALYSIS_SLURM" > "$ANALYSIS_SUBMIT"
+sbatch "$ANALYSIS_SUBMIT" >/dev/null
+
+echo "✅  Screening dispatch complete."
