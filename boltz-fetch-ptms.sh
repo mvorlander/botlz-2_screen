@@ -2,7 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export BOLTZ_APPTAINER_IMAGE="${BOLTZ_APPTAINER_IMAGE:-$ROOT_DIR/containers/current}"
+DEFAULT_IMAGE="$ROOT_DIR/containers/current"
+if [ -e "$DEFAULT_IMAGE" ]; then
+  DEFAULT_IMAGE="$(readlink -f "$DEFAULT_IMAGE")"
+fi
+export BOLTZ_APPTAINER_IMAGE="${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}"
 export BOLTZ_CONTAINER_SITEPKGS="${BOLTZ_CONTAINER_SITEPKGS:-$ROOT_DIR/sitepkgs_bundle}"
 export BOLTZ_HOST_PYTHON="${BOLTZ_HOST_PYTHON:-$ROOT_DIR/containers/current/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python}"
 

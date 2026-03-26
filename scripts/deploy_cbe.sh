@@ -3,6 +3,11 @@ set -euo pipefail
 
 TARGET_ROOT="${1:-/resources/AF2_PPI_tools/boltz}"
 BASE_IMAGE="${BASE_IMAGE:-$TARGET_ROOT/containers/boltz_screen_base}"
+BUILD_ROOT="${BOLTZ_BUILD_ROOT:-$TARGET_ROOT/tmp/$USER}"
+APPTAINER_TMPDIR="${APPTAINER_TMPDIR:-$BUILD_ROOT/apptainer-tmp}"
+APPTAINER_CACHEDIR="${APPTAINER_CACHEDIR:-$BUILD_ROOT/apptainer-cache}"
+BUILD_TAG="${BOLTZ_BUILD_TAG:-$(date +%Y%m%d_%H%M%S)}"
+NEW_CONTAINER="$TARGET_ROOT/containers/boltz_screen_${BUILD_TAG}"
 
 mkdir -p "$TARGET_ROOT"
 rsync -av --delete \
@@ -11,6 +16,8 @@ rsync -av --delete \
   ./ "$TARGET_ROOT/"
 
 mkdir -p "$TARGET_ROOT/containers"
+mkdir -p "$APPTAINER_TMPDIR" "$APPTAINER_CACHEDIR"
+chmod 700 "$BUILD_ROOT" "$APPTAINER_TMPDIR" "$APPTAINER_CACHEDIR" 2>/dev/null || true
 
 if [ ! -e "$BASE_IMAGE" ]; then
   if [ -d "$TARGET_ROOT/containers/current" ] || [ -f "$TARGET_ROOT/containers/current" ]; then
@@ -25,11 +32,15 @@ fi
 sed "s|^From: .*|From: $BASE_IMAGE|" \
   "$TARGET_ROOT/containers/boltz_screen.def" > "$TARGET_ROOT/containers/boltz_screen.cbe.def"
 
+rm -rf "$NEW_CONTAINER"
+TMPDIR="$APPTAINER_TMPDIR" \
+APPTAINER_TMPDIR="$APPTAINER_TMPDIR" \
+APPTAINER_CACHEDIR="$APPTAINER_CACHEDIR" \
 apptainer build --fakeroot --sandbox \
-  "$TARGET_ROOT/containers/boltz_screen" \
+  "$NEW_CONTAINER" \
   "$TARGET_ROOT/containers/boltz_screen.cbe.def"
 
-ln -sfn boltz_screen "$TARGET_ROOT/containers/current"
+ln -sfn "$(basename "$NEW_CONTAINER")" "$TARGET_ROOT/containers/current"
 
 chmod +x \
   "$TARGET_ROOT/boltz-screen.sh" \
@@ -40,3 +51,5 @@ chmod +x \
 echo "Installed to $TARGET_ROOT"
 echo "Container target: $TARGET_ROOT/containers/current"
 echo "Host submission python: $TARGET_ROOT/containers/current/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python"
+echo "Apptainer temp dir: $APPTAINER_TMPDIR"
+echo "Apptainer cache dir: $APPTAINER_CACHEDIR"

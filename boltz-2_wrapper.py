@@ -160,10 +160,11 @@ def _clean_seq(seq: str) -> str:
 # ------------------------------------------------------------------
 WRAPPER_DIR = pathlib.Path(__file__).resolve().parent
 INSTALL_ROOT = WRAPPER_DIR.parent
+_default_container = INSTALL_ROOT / "containers" / "current"
 CONTAINER_IMAGE = pathlib.Path(
     os.environ.get(
         "BOLTZ_APPTAINER_IMAGE",
-        str(INSTALL_ROOT / "containers" / "current"),
+        str(_default_container.resolve() if _default_container.exists() else _default_container),
     )
 )
 CONTAINER_SITEPKGS = pathlib.Path(
