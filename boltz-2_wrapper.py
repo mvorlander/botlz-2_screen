@@ -873,11 +873,7 @@ preflight_runtime() {{
   apptainer exec --cleanenv --nv \\
     "$BOLTZ_APPTAINER_IMAGE" \\
     /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; python - <<'"'"'PY'"'"'
-import antlr4.error.Errors
-import pandas._libs.window.aggregations
-from sympy.polys.numberfields import minpoly
-from sympy.matrices.expressions import MatrixExpr
-import pytorch_lightning
+from boltz.main import cli
 print("runtime-ok")
 PY'
 }}
@@ -902,8 +898,10 @@ while true; do
       rm -f "$PREFLIGHT_LOG"
       exit 97
     fi
-    echo "[requeue] transient runtime failure before prediction; requeuing job once..."
+    current_host=$(hostname -s)
+    echo "[requeue] transient runtime failure before prediction; excluding $current_host and requeuing job once..."
     rm -f "$PREFLIGHT_LOG"
+    scontrol update JobId="${{SLURM_JOB_ID}}" ExcNodeList="$current_host" >/dev/null 2>&1 || true
     scontrol requeue "${{SLURM_JOB_ID}}"
     exit 0
   fi
@@ -994,11 +992,7 @@ preflight_runtime() {{
   apptainer exec --cleanenv --nv \\
     "$BOLTZ_APPTAINER_IMAGE" \\
     /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; python - <<'"'"'PY'"'"'
-import antlr4.error.Errors
-import pandas._libs.window.aggregations
-from sympy.polys.numberfields import minpoly
-from sympy.matrices.expressions import MatrixExpr
-import pytorch_lightning
+from boltz.main import cli
 print("runtime-ok")
 PY'
 }}
@@ -1023,8 +1017,10 @@ while true; do
       rm -f "$PREFLIGHT_LOG"
       exit 97
     fi
-    echo "[requeue] transient runtime failure before prediction; requeuing task once..."
+    current_host=$(hostname -s)
+    echo "[requeue] transient runtime failure before prediction; excluding $current_host and requeuing task once..."
     rm -f "$PREFLIGHT_LOG"
+    scontrol update JobId="${{SLURM_JOB_ID}}" ExcNodeList="$current_host" >/dev/null 2>&1 || true
     scontrol requeue "${{SLURM_JOB_ID}}"
     exit 0
   fi
