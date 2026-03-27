@@ -839,6 +839,7 @@ SLURM_TEMPLATE = """#!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --mem=__MEM__
+#SBATCH --requeue
 
 set -euo pipefail
 export PYTORCH_MATMUL_PRECISION=medium
@@ -868,6 +869,19 @@ run_boltz() {{
     _ "$INPUT" "$OUTDIR" "$EXTRA"
 }}
 
+preflight_runtime() {{
+  apptainer exec --cleanenv --nv \\
+    "$BOLTZ_APPTAINER_IMAGE" \\
+    /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; python - <<'"'"'PY'"'"'
+import antlr4.error.Errors
+import pandas._libs.window.aggregations
+from sympy.polys.numberfields import minpoly
+from sympy.matrices.expressions import MatrixExpr
+import pytorch_lightning
+print("runtime-ok")
+PY'
+}}
+
 run_boltz_logged() {{
   local attempt_log="$1"
   set +e
@@ -879,6 +893,21 @@ run_boltz_logged() {{
 
 attempt=1
 while true; do
+  PREFLIGHT_LOG=$(mktemp "$OUTDIR/boltz_preflight.${{SLURM_JOB_ID}}.${{attempt}}.XXXXXX.log")
+  if ! preflight_runtime >"$PREFLIGHT_LOG" 2>&1; then
+    echo "[preflight] runtime import check failed:"
+    cat "$PREFLIGHT_LOG"
+    if [ -n "${{SLURM_RESTART_COUNT:-}}" ] && [ "${{SLURM_RESTART_COUNT:-0}}" -ge 1 ]; then
+      echo "[fail] preflight failed after requeue; not requeuing again."
+      rm -f "$PREFLIGHT_LOG"
+      exit 97
+    fi
+    echo "[requeue] transient runtime failure before prediction; requeuing job once..."
+    rm -f "$PREFLIGHT_LOG"
+    scontrol requeue "${{SLURM_JOB_ID}}"
+    exit 0
+  fi
+  rm -f "$PREFLIGHT_LOG"
   ATTEMPT_LOG=$(mktemp "$OUTDIR/boltz_attempt.${{SLURM_JOB_ID}}.${{attempt}}.XXXXXX.log")
   if run_boltz_logged "$ATTEMPT_LOG"; then
     rm -f "$ATTEMPT_LOG"
@@ -923,6 +952,7 @@ ARRAY_TEMPLATE = """#!/bin/bash
 #SBATCH --constraint=__CONSTRAINT__
 #SBATCH --gres=gpu:1
 #SBATCH --mem={mem}
+#SBATCH --requeue
 
 set -euo pipefail
 export PYTORCH_MATMUL_PRECISION=medium
@@ -960,6 +990,19 @@ run_boltz() {{
     _ "$YAML" "$OUTDIR" "$FLAGS"
 }}
 
+preflight_runtime() {{
+  apptainer exec --cleanenv --nv \\
+    "$BOLTZ_APPTAINER_IMAGE" \\
+    /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; python - <<'"'"'PY'"'"'
+import antlr4.error.Errors
+import pandas._libs.window.aggregations
+from sympy.polys.numberfields import minpoly
+from sympy.matrices.expressions import MatrixExpr
+import pytorch_lightning
+print("runtime-ok")
+PY'
+}}
+
 run_boltz_logged() {{
   local attempt_log="$1"
   set +e
@@ -971,6 +1014,21 @@ run_boltz_logged() {{
 
 attempt=1
 while true; do
+  PREFLIGHT_LOG=$(mktemp "$OUTDIR/boltz_preflight.${{SLURM_JOB_ID}}.${{SLURM_ARRAY_TASK_ID}}.${{attempt}}.XXXXXX.log")
+  if ! preflight_runtime >"$PREFLIGHT_LOG" 2>&1; then
+    echo "[preflight] runtime import check failed:"
+    cat "$PREFLIGHT_LOG"
+    if [ -n "${{SLURM_RESTART_COUNT:-}}" ] && [ "${{SLURM_RESTART_COUNT:-0}}" -ge 1 ]; then
+      echo "[fail] preflight failed after requeue; not requeuing again."
+      rm -f "$PREFLIGHT_LOG"
+      exit 97
+    fi
+    echo "[requeue] transient runtime failure before prediction; requeuing task once..."
+    rm -f "$PREFLIGHT_LOG"
+    scontrol requeue "${{SLURM_JOB_ID}}"
+    exit 0
+  fi
+  rm -f "$PREFLIGHT_LOG"
   ATTEMPT_LOG=$(mktemp "$OUTDIR/boltz_attempt.${{SLURM_JOB_ID}}.${{SLURM_ARRAY_TASK_ID}}.${{attempt}}.XXXXXX.log")
   if run_boltz_logged "$ATTEMPT_LOG"; then
     rm -f "$ATTEMPT_LOG"
