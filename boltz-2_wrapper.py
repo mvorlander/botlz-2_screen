@@ -854,11 +854,37 @@ if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${{PYTHONPATH:+:$PYTHONPATH}}"
 fi
 
-apptainer exec --cleanenv --nv \\
-  --bind "$INPUT:$INPUT" \\
-  "$BOLTZ_APPTAINER_IMAGE" \\
-  /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec boltz predict "$1" --out_dir "$2" --accelerator gpu --use_msa_server ${{3:-}}' \\
-  _ "$INPUT" "$OUTDIR" "$EXTRA"
+run_boltz() {{
+  apptainer exec --cleanenv --nv \\
+    --bind "$INPUT:$INPUT" \\
+    "$BOLTZ_APPTAINER_IMAGE" \\
+    /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec boltz predict "$1" --out_dir "$2" --accelerator gpu --use_msa_server ${{3:-}}' \\
+    _ "$INPUT" "$OUTDIR" "$EXTRA"
+}}
+
+attempt=1
+while true; do
+  ATTEMPT_LOG=$(mktemp "$OUTDIR/boltz_attempt.${{SLURM_JOB_ID}}.${{attempt}}.XXXXXX.log")
+  if run_boltz 2>&1 | tee "$ATTEMPT_LOG"; then
+    rm -f "$ATTEMPT_LOG"
+    break
+  fi
+  rc=$?
+  if grep -Eiq 'out of memory|ran out of memory|cuda.*out of memory' "$ATTEMPT_LOG"; then
+    echo "[fail] OOM-like failure detected; not retrying."
+    rm -f "$ATTEMPT_LOG"
+    exit "$rc"
+  fi
+  if [ "$attempt" -ge 2 ]; then
+    echo "[fail] command failed after $attempt attempt(s); not retrying."
+    rm -f "$ATTEMPT_LOG"
+    exit "$rc"
+  fi
+  echo "[retry] transient-looking failure (exit $rc); retrying once after 15s..."
+  rm -f "$ATTEMPT_LOG"
+  attempt=$((attempt + 1))
+  sleep 15
+done
 # ------------------------------------------------------------------
 # Flatten output – move boltz_results_* one level up
 # ------------------------------------------------------------------
@@ -912,10 +938,36 @@ if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${{PYTHONPATH:+:$PYTHONPATH}}"
 fi
 
-apptainer exec --cleanenv --nv --bind "$YAML:$YAML" \\
-  "$BOLTZ_APPTAINER_IMAGE" \\
-  /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec boltz predict "$1" --out_dir "$2" --accelerator gpu --use_msa_server ${{3:-}}' \\
-  _ "$YAML" "$OUTDIR" "$FLAGS"
+run_boltz() {{
+  apptainer exec --cleanenv --nv --bind "$YAML:$YAML" \\
+    "$BOLTZ_APPTAINER_IMAGE" \\
+    /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec boltz predict "$1" --out_dir "$2" --accelerator gpu --use_msa_server ${{3:-}}' \\
+    _ "$YAML" "$OUTDIR" "$FLAGS"
+}}
+
+attempt=1
+while true; do
+  ATTEMPT_LOG=$(mktemp "$OUTDIR/boltz_attempt.${{SLURM_JOB_ID}}.${{SLURM_ARRAY_TASK_ID}}.${{attempt}}.XXXXXX.log")
+  if run_boltz 2>&1 | tee "$ATTEMPT_LOG"; then
+    rm -f "$ATTEMPT_LOG"
+    break
+  fi
+  rc=$?
+  if grep -Eiq 'out of memory|ran out of memory|cuda.*out of memory' "$ATTEMPT_LOG"; then
+    echo "[fail] OOM-like failure detected; not retrying."
+    rm -f "$ATTEMPT_LOG"
+    exit "$rc"
+  fi
+  if [ "$attempt" -ge 2 ]; then
+    echo "[fail] command failed after $attempt attempt(s); not retrying."
+    rm -f "$ATTEMPT_LOG"
+    exit "$rc"
+  fi
+  echo "[retry] transient-looking failure (exit $rc); retrying once after 15s..."
+  rm -f "$ATTEMPT_LOG"
+  attempt=$((attempt + 1))
+  sleep 15
+done
         
 # ------------------------------------------------------------------
 # Flatten output – move boltz_results_* one level up
@@ -935,7 +987,7 @@ ANALYSIS_TEMPLATE = """#!/bin/bash
 #SBATCH --partition=c
 #SBATCH --time=00:30:00
 #SBATCH --mem=4G
-#SBATCH --dependency=afterok:{array_id}
+#SBATCH --dependency=afterany:{array_id}
 
 export BOLTZ_APPTAINER_IMAGE="${{BOLTZ_APPTAINER_IMAGE:-__IMAGE__}}"
 export BOLTZ_CONTAINER_SITEPKGS="${{BOLTZ_CONTAINER_SITEPKGS:-__SITEPKGS__}}"

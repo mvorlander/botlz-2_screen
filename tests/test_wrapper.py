@@ -87,6 +87,17 @@ def test_gpu_and_flags_cover_size_and_modifiers(wrapper_mod):
     assert constraint is None
 
 
+def test_array_constraint_intersects_job_classes(wrapper_mod):
+    assert wrapper_mod.array_constraint(["g4|g3", "g4|g2|g3|g1", "g4|g2"]) == "g4"
+    assert wrapper_mod.array_constraint(["g4|g3", "g4|g3"]) == "g4|g3"
+
+
+def test_analysis_dependency_and_retry_logic_present(wrapper_mod):
+    assert "dependency=afterany:{array_id}" in wrapper_mod.ANALYSIS_TEMPLATE
+    assert "[retry] transient-looking failure" in wrapper_mod.ARRAY_TEMPLATE
+    assert "OOM-like failure detected; not retrying." in wrapper_mod.ARRAY_TEMPLATE
+
+
 def test_parse_list_and_assert_token_validation(tmp_path, wrapper_mod):
     fasta = tmp_path / "x.fa"
     fasta.write_text(">x\nMSTNPKPQR\n")
