@@ -10,13 +10,14 @@ fi
 PREP_IMAGE="${BOLTZ_PREPARE_IMAGE:-$ROOT_DIR/containers/boltz_screen_base}"
 export BOLTZ_APPTAINER_IMAGE="${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}"
 export BOLTZ_CONTAINER_SITEPKGS="${BOLTZ_CONTAINER_SITEPKGS:-$ROOT_DIR/sitepkgs_bundle}"
+export APPTAINERENV_PYTHONNOUSERSITE=1
 
 if [ ! -e "$PREP_IMAGE" ]; then
   echo "Preparation container not found: $PREP_IMAGE" >&2
   exit 1
 fi
 
-exec apptainer exec --no-mount hostfs \
+exec apptainer exec --cleanenv --no-mount hostfs \
   --bind "$ROOT_DIR:$ROOT_DIR" \
   --bind "$WORK_DIR:$WORK_DIR" \
   "$PREP_IMAGE" \

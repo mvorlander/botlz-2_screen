@@ -9,12 +9,13 @@ if [ -e "$DEFAULT_IMAGE" ]; then
 fi
 ANALYSIS_IMAGE="${BOLTZ_APPTAINER_IMAGE:-$ROOT_DIR/containers/boltz_screen}"
 export BOLTZ_CONTAINER_SITEPKGS="${BOLTZ_CONTAINER_SITEPKGS:-$ROOT_DIR/sitepkgs_bundle}"
+export APPTAINERENV_PYTHONNOUSERSITE=1
 
 if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${PYTHONPATH:+:$PYTHONPATH}"
 fi
 
-exec apptainer exec --no-mount hostfs \
+exec apptainer exec --cleanenv --no-mount hostfs \
   --bind "$ROOT_DIR:$ROOT_DIR" \
   --bind "$WORK_DIR:$WORK_DIR" \
   "$ANALYSIS_IMAGE" \

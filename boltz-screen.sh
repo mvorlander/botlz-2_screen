@@ -7,6 +7,7 @@ DEFAULT_IMAGE="$ROOT_DIR/containers/boltz_screen_base"
 PREP_IMAGE="${BOLTZ_PREPARE_IMAGE:-$ROOT_DIR/containers/boltz_screen_base}"
 export BOLTZ_APPTAINER_IMAGE="${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}"
 export BOLTZ_CONTAINER_SITEPKGS="${BOLTZ_CONTAINER_SITEPKGS:-$ROOT_DIR/sitepkgs_bundle}"
+export APPTAINERENV_PYTHONNOUSERSITE=1
 TMP_LOG="$(mktemp "${TMPDIR:-/tmp}/boltz-screen.XXXXXX.log")"
 trap 'rm -f "$TMP_LOG"' EXIT
 
@@ -20,8 +21,10 @@ if [ ! -e "$BOLTZ_APPTAINER_IMAGE" ]; then
   exit 1
 fi
 
-env BOLTZ_PREPARE_ONLY=1 \
-  apptainer exec --no-mount hostfs \
+env APPTAINERENV_BOLTZ_PREPARE_ONLY=1 \
+  APPTAINERENV_BOLTZ_APPTAINER_IMAGE="$BOLTZ_APPTAINER_IMAGE" \
+  APPTAINERENV_BOLTZ_CONTAINER_SITEPKGS="$BOLTZ_CONTAINER_SITEPKGS" \
+  apptainer exec --cleanenv --no-mount hostfs \
   --bind "$ROOT_DIR:$ROOT_DIR" \
   --bind "$WORK_DIR:$WORK_DIR" \
   "$PREP_IMAGE" \

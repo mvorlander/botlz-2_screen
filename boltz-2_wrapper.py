@@ -159,7 +159,7 @@ def _clean_seq(seq: str) -> str:
 # Lets us reference boltz_analysis.py regardless of CWD.
 # ------------------------------------------------------------------
 WRAPPER_DIR = pathlib.Path(__file__).resolve().parent
-INSTALL_ROOT = WRAPPER_DIR.parent
+INSTALL_ROOT = WRAPPER_DIR
 _default_container = INSTALL_ROOT / "containers" / "current"
 CONTAINER_IMAGE = pathlib.Path(
     os.environ.get(
@@ -194,6 +194,7 @@ def _apptainer_env() -> dict[str, str]:
     pythonpath = _container_pythonpath()
     if pythonpath:
         env["APPTAINERENV_PYTHONPATH"] = pythonpath
+    env["APPTAINERENV_PYTHONNOUSERSITE"] = "1"
     return env
 
 
@@ -848,6 +849,7 @@ mkdir -p "$OUTDIR"
 
 export BOLTZ_APPTAINER_IMAGE="${{BOLTZ_APPTAINER_IMAGE:-__IMAGE__}}"
 export BOLTZ_CONTAINER_SITEPKGS="${{BOLTZ_CONTAINER_SITEPKGS:-__SITEPKGS__}}"
+export APPTAINERENV_PYTHONNOUSERSITE=1
 if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${{PYTHONPATH:+:$PYTHONPATH}}"
 fi
@@ -905,6 +907,7 @@ echo "flags : $FLAGS"
 
 export BOLTZ_APPTAINER_IMAGE="${{BOLTZ_APPTAINER_IMAGE:-__IMAGE__}}"
 export BOLTZ_CONTAINER_SITEPKGS="${{BOLTZ_CONTAINER_SITEPKGS:-__SITEPKGS__}}"
+export APPTAINERENV_PYTHONNOUSERSITE=1
 if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${{PYTHONPATH:+:$PYTHONPATH}}"
 fi
@@ -936,6 +939,7 @@ ANALYSIS_TEMPLATE = """#!/bin/bash
 
 export BOLTZ_APPTAINER_IMAGE="${{BOLTZ_APPTAINER_IMAGE:-__IMAGE__}}"
 export BOLTZ_CONTAINER_SITEPKGS="${{BOLTZ_CONTAINER_SITEPKGS:-__SITEPKGS__}}"
+export APPTAINERENV_PYTHONNOUSERSITE=1
 if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${{PYTHONPATH:+:$PYTHONPATH}}"
 fi
