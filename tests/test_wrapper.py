@@ -96,6 +96,8 @@ def test_analysis_dependency_and_retry_logic_present(wrapper_mod):
     assert "dependency=afterany:{array_id}" in wrapper_mod.ANALYSIS_TEMPLATE
     assert "[retry] transient-looking failure" in wrapper_mod.ARRAY_TEMPLATE
     assert "OOM-like failure detected; not retrying." in wrapper_mod.ARRAY_TEMPLATE
+    assert "PIPESTATUS[0]" in wrapper_mod.ARRAY_TEMPLATE
+    assert "BOLTZ_ANALYSIS_APPTAINER_IMAGE" in wrapper_mod.ANALYSIS_TEMPLATE
 
 
 def test_parse_list_and_assert_token_validation(tmp_path, wrapper_mod):

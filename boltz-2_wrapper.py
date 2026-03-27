@@ -177,6 +177,12 @@ CONTAINER_BIN_DIR = os.environ.get(
     "BOLTZ_CONTAINER_BIN_DIR",
     "/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin",
 )
+ANALYSIS_CONTAINER_IMAGE = pathlib.Path(
+    os.environ.get(
+        "BOLTZ_ANALYSIS_APPTAINER_IMAGE",
+        str(INSTALL_ROOT / "containers" / "boltz_screen"),
+    )
+)
 
 
 def _container_pythonpath() -> str:
@@ -862,10 +868,19 @@ run_boltz() {{
     _ "$INPUT" "$OUTDIR" "$EXTRA"
 }}
 
+run_boltz_logged() {{
+  local attempt_log="$1"
+  set +e
+  run_boltz 2>&1 | tee "$attempt_log"
+  local cmd_rc=${{PIPESTATUS[0]}}
+  set -e
+  return "$cmd_rc"
+}}
+
 attempt=1
 while true; do
   ATTEMPT_LOG=$(mktemp "$OUTDIR/boltz_attempt.${{SLURM_JOB_ID}}.${{attempt}}.XXXXXX.log")
-  if run_boltz 2>&1 | tee "$ATTEMPT_LOG"; then
+  if run_boltz_logged "$ATTEMPT_LOG"; then
     rm -f "$ATTEMPT_LOG"
     break
   fi
@@ -945,10 +960,19 @@ run_boltz() {{
     _ "$YAML" "$OUTDIR" "$FLAGS"
 }}
 
+run_boltz_logged() {{
+  local attempt_log="$1"
+  set +e
+  run_boltz 2>&1 | tee "$attempt_log"
+  local cmd_rc=${{PIPESTATUS[0]}}
+  set -e
+  return "$cmd_rc"
+}}
+
 attempt=1
 while true; do
   ATTEMPT_LOG=$(mktemp "$OUTDIR/boltz_attempt.${{SLURM_JOB_ID}}.${{SLURM_ARRAY_TASK_ID}}.${{attempt}}.XXXXXX.log")
-  if run_boltz 2>&1 | tee "$ATTEMPT_LOG"; then
+  if run_boltz_logged "$ATTEMPT_LOG"; then
     rm -f "$ATTEMPT_LOG"
     break
   fi
@@ -989,7 +1013,7 @@ ANALYSIS_TEMPLATE = """#!/bin/bash
 #SBATCH --mem=4G
 #SBATCH --dependency=afterany:{array_id}
 
-export BOLTZ_APPTAINER_IMAGE="${{BOLTZ_APPTAINER_IMAGE:-__IMAGE__}}"
+export BOLTZ_APPTAINER_IMAGE="${{BOLTZ_ANALYSIS_APPTAINER_IMAGE:-__ANALYSIS_IMAGE__}}"
 export BOLTZ_CONTAINER_SITEPKGS="${{BOLTZ_CONTAINER_SITEPKGS:-__SITEPKGS__}}"
 export APPTAINERENV_PYTHONNOUSERSITE=1
 if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
@@ -1285,6 +1309,7 @@ def main():
             root=str(root_out), job_name=job_name, n=len(jobs_list), mem=f"{max_mem}M")
             .replace("__CONSTRAINT__", constraint)
             .replace("__IMAGE__", str(CONTAINER_IMAGE))
+            .replace("__ANALYSIS_IMAGE__", str(ANALYSIS_CONTAINER_IMAGE))
             .replace("__SITEPKGS__", str(CONTAINER_SITEPKGS))
             .replace("__BIN_DIR__", CONTAINER_BIN_DIR))
 
@@ -1298,6 +1323,7 @@ def main():
             chain_flag=chain_flag
         )
         ana_script = ana_script.replace("__IMAGE__", str(CONTAINER_IMAGE))
+        ana_script = ana_script.replace("__ANALYSIS_IMAGE__", str(ANALYSIS_CONTAINER_IMAGE))
         ana_script = ana_script.replace("__SITEPKGS__", str(CONTAINER_SITEPKGS))
 
         analysis_slurm.write_text(ana_script)
