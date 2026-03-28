@@ -3,6 +3,10 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK_DIR="$(pwd -P)"
+TARGET_ROOT="${1:-$WORK_DIR}"
+if [ -d "$TARGET_ROOT" ]; then
+  TARGET_ROOT="$(cd "$TARGET_ROOT" && pwd -P)"
+fi
 DEFAULT_IMAGE="$ROOT_DIR/containers/current"
 if [ -e "$DEFAULT_IMAGE" ]; then
   DEFAULT_IMAGE="$(readlink -f "$DEFAULT_IMAGE")"
@@ -18,6 +22,7 @@ fi
 exec apptainer exec --cleanenv --no-mount hostfs \
   --bind "$ROOT_DIR:$ROOT_DIR" \
   --bind "$WORK_DIR:$WORK_DIR" \
+  --bind "$TARGET_ROOT:$TARGET_ROOT" \
   "$ANALYSIS_IMAGE" \
   /usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python \
   "$ROOT_DIR/boltz_analysis.py" "$@"

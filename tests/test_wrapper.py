@@ -98,6 +98,8 @@ def test_analysis_dependency_and_retry_logic_present(wrapper_mod):
     assert "OOM-like failure detected; not retrying." in wrapper_mod.ARRAY_TEMPLATE
     assert "PIPESTATUS[0]" in wrapper_mod.ARRAY_TEMPLATE
     assert "BOLTZ_ANALYSIS_APPTAINER_IMAGE" in wrapper_mod.ANALYSIS_TEMPLATE
+    assert "--no-mount hostfs" in wrapper_mod.ANALYSIS_TEMPLATE
+    assert '/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python' in wrapper_mod.ANALYSIS_TEMPLATE
     assert "[requeue] transient runtime failure before prediction" in wrapper_mod.ARRAY_TEMPLATE
     assert "from boltz.main import cli" in wrapper_mod.ARRAY_TEMPLATE
     assert "ExcNodeList" in wrapper_mod.ARRAY_TEMPLATE

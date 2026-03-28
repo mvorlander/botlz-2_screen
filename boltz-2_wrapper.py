@@ -1074,8 +1074,12 @@ if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${{PYTHONPATH:+:$PYTHONPATH}}"
 fi
 
-apptainer exec --cleanenv "$BOLTZ_APPTAINER_IMAGE" \\
-  python {wrapper_dir}/boltz_analysis.py {root} --no-labels {chain_flag}
+apptainer exec --cleanenv --no-mount hostfs \\
+  --bind "{wrapper_dir}:{wrapper_dir}" \\
+  --bind "{root}:{root}" \\
+  "$BOLTZ_APPTAINER_IMAGE" \\
+  /usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python \\
+  {wrapper_dir}/boltz_analysis.py {root} --no-labels {chain_flag}
 """
 
 def write_slurm(job: str, yaml_path: pathlib.Path, outdir: pathlib.Path, flags: str, mem_req: str, part: str, constraint: str) -> pathlib.Path:
