@@ -99,11 +99,34 @@ def test_analysis_dependency_and_retry_logic_present(wrapper_mod):
     assert "PIPESTATUS[0]" in wrapper_mod.ARRAY_TEMPLATE
     assert "BOLTZ_ANALYSIS_APPTAINER_IMAGE" in wrapper_mod.ANALYSIS_TEMPLATE
     assert "--no-mount hostfs" in wrapper_mod.ANALYSIS_TEMPLATE
-    assert '/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert '/bin/bash --noprofile --norc -lc' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert 'export PATH="__BIN_DIR__:$PATH"; exec python "$@"' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert "__BIN_DIR__" in wrapper_mod.ANALYSIS_TEMPLATE
     assert "[requeue] transient runtime failure before prediction" in wrapper_mod.ARRAY_TEMPLATE
     assert "from boltz.main import cli" in wrapper_mod.ARRAY_TEMPLATE
     assert "ExcNodeList" in wrapper_mod.ARRAY_TEMPLATE
     assert "#SBATCH --requeue" in wrapper_mod.ARRAY_TEMPLATE
+
+
+def test_container_defaults_point_at_current_image(wrapper_mod):
+    assert str(wrapper_mod.CONTAINER_IMAGE).endswith("/containers/current")
+    assert str(wrapper_mod.ANALYSIS_CONTAINER_IMAGE).endswith("/containers/current")
+
+
+def test_shell_wrappers_default_to_current_image():
+    repo_root = pathlib.Path(__file__).resolve().parents[1]
+    screen_text = (repo_root / "boltz-screen.sh").read_text()
+    fetch_text = (repo_root / "boltz-fetch-ptms.sh").read_text()
+    analysis_text = (repo_root / "boltz-analysis.sh").read_text()
+
+    assert 'DEFAULT_IMAGE="$ROOT_DIR/containers/current"' in screen_text
+    assert 'PREP_IMAGE="${BOLTZ_PREPARE_IMAGE:-$DEFAULT_IMAGE}"' in screen_text
+    assert 'exec python "$@"' in screen_text
+    assert 'DEFAULT_IMAGE="$ROOT_DIR/containers/current"' in fetch_text
+    assert 'PREP_IMAGE="${BOLTZ_PREPARE_IMAGE:-$DEFAULT_IMAGE}"' in fetch_text
+    assert 'exec python "$@"' in fetch_text
+    assert 'ANALYSIS_IMAGE="${BOLTZ_ANALYSIS_APPTAINER_IMAGE:-${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}}"' in analysis_text
+    assert 'exec python "$@"' in analysis_text
 
 
 def test_parse_list_and_assert_token_validation(tmp_path, wrapper_mod):

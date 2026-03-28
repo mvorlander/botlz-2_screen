@@ -3,8 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK_DIR="$(pwd -P)"
-DEFAULT_IMAGE="$ROOT_DIR/containers/boltz_screen_base"
-PREP_IMAGE="${BOLTZ_PREPARE_IMAGE:-$ROOT_DIR/containers/boltz_screen_base}"
+DEFAULT_IMAGE="$ROOT_DIR/containers/current"
+if [ -e "$DEFAULT_IMAGE" ]; then
+  DEFAULT_IMAGE="$(readlink -f "$DEFAULT_IMAGE")"
+fi
+PREP_IMAGE="${BOLTZ_PREPARE_IMAGE:-$DEFAULT_IMAGE}"
 export BOLTZ_APPTAINER_IMAGE="${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}"
 export BOLTZ_CONTAINER_SITEPKGS="${BOLTZ_CONTAINER_SITEPKGS:-$ROOT_DIR/sitepkgs_bundle}"
 export APPTAINERENV_PYTHONNOUSERSITE=1
@@ -28,8 +31,8 @@ env APPTAINERENV_BOLTZ_PREPARE_ONLY=1 \
   --bind "$ROOT_DIR:$ROOT_DIR" \
   --bind "$WORK_DIR:$WORK_DIR" \
   "$PREP_IMAGE" \
-  /usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python \
-  "$ROOT_DIR/boltz-2_wrapper.py" "$@" | tee "$TMP_LOG"
+  /bin/bash --noprofile --norc -lc 'export PATH="/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin:$PATH"; exec python "$@"' \
+  _ "$ROOT_DIR/boltz-2_wrapper.py" "$@" | tee "$TMP_LOG"
 
 DISPATCH_ENV="$(awk -F= '/^BOLTZ_DISPATCH_ENV=/{print $2}' "$TMP_LOG" | tail -n 1)"
 if [ -z "$DISPATCH_ENV" ]; then

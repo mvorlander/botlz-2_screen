@@ -180,7 +180,7 @@ CONTAINER_BIN_DIR = os.environ.get(
 ANALYSIS_CONTAINER_IMAGE = pathlib.Path(
     os.environ.get(
         "BOLTZ_ANALYSIS_APPTAINER_IMAGE",
-        str(INSTALL_ROOT / "containers" / "boltz_screen"),
+        str(_default_container.resolve() if _default_container.exists() else _default_container),
     )
 )
 
@@ -1078,8 +1078,8 @@ apptainer exec --cleanenv --no-mount hostfs \\
   --bind "{wrapper_dir}:{wrapper_dir}" \\
   --bind "{root}:{root}" \\
   "$BOLTZ_APPTAINER_IMAGE" \\
-  /usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python \\
-  {wrapper_dir}/boltz_analysis.py {root} --no-labels {chain_flag}
+  /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec python "$@"' \\
+  _ {wrapper_dir}/boltz_analysis.py {root} --no-labels {chain_flag}
 """
 
 def write_slurm(job: str, yaml_path: pathlib.Path, outdir: pathlib.Path, flags: str, mem_req: str, part: str, constraint: str) -> pathlib.Path:
@@ -1383,6 +1383,7 @@ def main():
         ana_script = ana_script.replace("__IMAGE__", str(CONTAINER_IMAGE))
         ana_script = ana_script.replace("__ANALYSIS_IMAGE__", str(ANALYSIS_CONTAINER_IMAGE))
         ana_script = ana_script.replace("__SITEPKGS__", str(CONTAINER_SITEPKGS))
+        ana_script = ana_script.replace("__BIN_DIR__", CONTAINER_BIN_DIR)
 
         analysis_slurm.write_text(ana_script)
 

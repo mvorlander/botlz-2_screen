@@ -11,7 +11,7 @@ DEFAULT_IMAGE="$ROOT_DIR/containers/current"
 if [ -e "$DEFAULT_IMAGE" ]; then
   DEFAULT_IMAGE="$(readlink -f "$DEFAULT_IMAGE")"
 fi
-ANALYSIS_IMAGE="${BOLTZ_ANALYSIS_APPTAINER_IMAGE:-${BOLTZ_APPTAINER_IMAGE:-$ROOT_DIR/containers/boltz_screen}}"
+ANALYSIS_IMAGE="${BOLTZ_ANALYSIS_APPTAINER_IMAGE:-${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}}"
 export BOLTZ_CONTAINER_SITEPKGS="${BOLTZ_CONTAINER_SITEPKGS:-$ROOT_DIR/sitepkgs_bundle}"
 export APPTAINERENV_PYTHONNOUSERSITE=1
 
@@ -24,5 +24,5 @@ exec apptainer exec --cleanenv --no-mount hostfs \
   --bind "$WORK_DIR:$WORK_DIR" \
   --bind "$TARGET_ROOT:$TARGET_ROOT" \
   "$ANALYSIS_IMAGE" \
-  /usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin/python \
-  "$ROOT_DIR/boltz_analysis.py" "$@"
+  /bin/bash --noprofile --norc -lc 'export PATH="/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin:$PATH"; exec python "$@"' \
+  _ "$ROOT_DIR/boltz_analysis.py" "$@"
