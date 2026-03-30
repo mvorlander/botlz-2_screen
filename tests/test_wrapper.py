@@ -111,7 +111,8 @@ def test_analysis_dependency_and_retry_logic_present(wrapper_mod):
     assert 'export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS"' in wrapper_mod.ARRAY_TEMPLATE
     assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in wrapper_mod.ARRAY_TEMPLATE
     assert '--home "$RUNTIME_HOME"' in wrapper_mod.ARRAY_TEMPLATE
-    assert '--bind "$OUTDIR:$OUTDIR"' in wrapper_mod.ARRAY_TEMPLATE
+    assert 'JOB_DIR="$(dirname "$YAML")"' in wrapper_mod.ARRAY_TEMPLATE
+    assert '--bind "$JOB_DIR:$JOB_DIR"' in wrapper_mod.ARRAY_TEMPLATE
     assert '--no-mount hostfs --nv' in wrapper_mod.ARRAY_TEMPLATE
     assert '${PYTHONPATH:+:$PYTHONPATH}' not in wrapper_mod.ARRAY_TEMPLATE
     assert 'python -I - <<' in wrapper_mod.ARRAY_TEMPLATE

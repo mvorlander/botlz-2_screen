@@ -873,6 +873,8 @@ export APPTAINERENV_TEMP="$RUNTIME_TMP"
 INPUT="$1"
 OUTDIR="$2"
 EXTRA="$3"
+INPUT_DIR="$(dirname "$INPUT")"
+OUTDIR_PARENT="$(dirname "$OUTDIR")"
 
 echo "[run]  $(date)  GPU on $(hostname)"
 echo "Input : $INPUT"
@@ -890,8 +892,8 @@ fi
 run_boltz() {{
   apptainer exec --cleanenv --no-mount hostfs --nv \\
     --home "$RUNTIME_HOME" \\
-    --bind "$INPUT:$INPUT" \\
-    --bind "$OUTDIR:$OUTDIR" \\
+    --bind "$INPUT_DIR:$INPUT_DIR" \\
+    --bind "$OUTDIR_PARENT:$OUTDIR_PARENT" \\
     --bind "$RUNTIME_TMP:$RUNTIME_TMP" \\
     "$BOLTZ_APPTAINER_IMAGE" \\
     /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec boltz predict "$1" --out_dir "$2" --accelerator gpu --use_msa_server ${{3:-}}' \\
@@ -992,6 +994,7 @@ export TORCH_MATMUL_ALLOW_TF32=1
 # ------------------------------------------------------------------
 IFS=$'\\t' read -r YAML OUTDIR FLAGS MEM CONSTRAINT < <(
       sed -n "${{SLURM_ARRAY_TASK_ID}}p" {root}/jobs.list)
+JOB_DIR="$(dirname "$YAML")"
 
 # Re‑direct *all* subsequent stdout / stderr to that directory
 mkdir -p "${{OUTDIR}}"
@@ -1035,8 +1038,7 @@ fi
 run_boltz() {{
   apptainer exec --cleanenv --no-mount hostfs --nv \\
     --home "$RUNTIME_HOME" \\
-    --bind "$YAML:$YAML" \\
-    --bind "$OUTDIR:$OUTDIR" \\
+    --bind "$JOB_DIR:$JOB_DIR" \\
     --bind "$RUNTIME_TMP:$RUNTIME_TMP" \\
     "$BOLTZ_APPTAINER_IMAGE" \\
     /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec boltz predict "$1" --out_dir "$2" --accelerator gpu --use_msa_server ${{3:-}}' \\
