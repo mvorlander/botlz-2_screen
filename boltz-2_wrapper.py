@@ -852,6 +852,24 @@ export PYTORCH_MATMUL_PRECISION=medium
 export TORCH_MATMUL_ALLOW_TF32=1
 unset PYTHONPATH PYTHONHOME PYTHONUSERBASE
 unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE
+runtime_base_default() {{
+  if [ -n "${{BOLTZ_RUNTIME_BASE:-}}" ]; then
+    printf '%s\\n' "$BOLTZ_RUNTIME_BASE"
+  elif [ -n "${{USER:-}}" ] && [ -d "/scratch-cbe/users/$USER" ] && [ -w "/scratch-cbe/users/$USER" ]; then
+    printf '/scratch-cbe/users/%s/.boltz_runtime\\n' "$USER"
+  elif [ -n "${{HOME:-}}" ] && [ -d "$HOME" ] && [ -w "$HOME" ]; then
+    printf '%s/.cache/boltz_runtime\\n' "$HOME"
+  else
+    printf '%s/boltz_runtime_%s\\n' "${{TMPDIR:-/tmp}}" "${{USER:-$(id -u)}}"
+  fi
+}}
+RUNTIME_BASE="$(runtime_base_default)"
+RUNTIME_HOME="$RUNTIME_BASE/home"
+RUNTIME_TMP="$RUNTIME_BASE/tmp"
+mkdir -p "$RUNTIME_HOME" "$RUNTIME_TMP"
+export APPTAINERENV_TMPDIR="$RUNTIME_TMP"
+export APPTAINERENV_TMP="$RUNTIME_TMP"
+export APPTAINERENV_TEMP="$RUNTIME_TMP"
 INPUT="$1"
 OUTDIR="$2"
 EXTRA="$3"
@@ -870,15 +888,20 @@ if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
 fi
 
 run_boltz() {{
-  apptainer exec --cleanenv --nv \\
+  apptainer exec --cleanenv --no-mount hostfs --nv \\
+    --home "$RUNTIME_HOME" \\
     --bind "$INPUT:$INPUT" \\
+    --bind "$OUTDIR:$OUTDIR" \\
+    --bind "$RUNTIME_TMP:$RUNTIME_TMP" \\
     "$BOLTZ_APPTAINER_IMAGE" \\
     /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec boltz predict "$1" --out_dir "$2" --accelerator gpu --use_msa_server ${{3:-}}' \\
     _ "$INPUT" "$OUTDIR" "$EXTRA"
 }}
 
 preflight_runtime() {{
-  apptainer exec --cleanenv --nv \\
+  apptainer exec --cleanenv --no-mount hostfs --nv \\
+    --home "$RUNTIME_HOME" \\
+    --bind "$RUNTIME_TMP:$RUNTIME_TMP" \\
     "$BOLTZ_APPTAINER_IMAGE" \\
     /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; python -I - <<'"'"'PY'"'"'
 from boltz.main import cli
@@ -978,6 +1001,24 @@ exec > "${{OUTDIR}}/slurm_${{SLURM_JOB_ID}}.out" 2>&1
 [ "${{FLAGS}}" = "-" ] && FLAGS=""
 unset PYTHONPATH PYTHONHOME PYTHONUSERBASE
 unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE
+runtime_base_default() {{
+  if [ -n "${{BOLTZ_RUNTIME_BASE:-}}" ]; then
+    printf '%s\\n' "$BOLTZ_RUNTIME_BASE"
+  elif [ -n "${{USER:-}}" ] && [ -d "/scratch-cbe/users/$USER" ] && [ -w "/scratch-cbe/users/$USER" ]; then
+    printf '/scratch-cbe/users/%s/.boltz_runtime\\n' "$USER"
+  elif [ -n "${{HOME:-}}" ] && [ -d "$HOME" ] && [ -w "$HOME" ]; then
+    printf '%s/.cache/boltz_runtime\\n' "$HOME"
+  else
+    printf '%s/boltz_runtime_%s\\n' "${{TMPDIR:-/tmp}}" "${{USER:-$(id -u)}}"
+  fi
+}}
+RUNTIME_BASE="$(runtime_base_default)"
+RUNTIME_HOME="$RUNTIME_BASE/home"
+RUNTIME_TMP="$RUNTIME_BASE/tmp"
+mkdir -p "$RUNTIME_HOME" "$RUNTIME_TMP"
+export APPTAINERENV_TMPDIR="$RUNTIME_TMP"
+export APPTAINERENV_TMP="$RUNTIME_TMP"
+export APPTAINERENV_TEMP="$RUNTIME_TMP"
 
 echo "[run]  $(date) on $(hostname)  — array ${{SLURM_ARRAY_TASK_ID}} / ${{SLURM_ARRAY_TASK_MAX}}"
 echo "yaml  : $YAML"
@@ -992,14 +1033,20 @@ if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
 fi
 
 run_boltz() {{
-  apptainer exec --cleanenv --nv --bind "$YAML:$YAML" \\
+  apptainer exec --cleanenv --no-mount hostfs --nv \\
+    --home "$RUNTIME_HOME" \\
+    --bind "$YAML:$YAML" \\
+    --bind "$OUTDIR:$OUTDIR" \\
+    --bind "$RUNTIME_TMP:$RUNTIME_TMP" \\
     "$BOLTZ_APPTAINER_IMAGE" \\
     /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec boltz predict "$1" --out_dir "$2" --accelerator gpu --use_msa_server ${{3:-}}' \\
     _ "$YAML" "$OUTDIR" "$FLAGS"
 }}
 
 preflight_runtime() {{
-  apptainer exec --cleanenv --nv \\
+  apptainer exec --cleanenv --no-mount hostfs --nv \\
+    --home "$RUNTIME_HOME" \\
+    --bind "$RUNTIME_TMP:$RUNTIME_TMP" \\
     "$BOLTZ_APPTAINER_IMAGE" \\
     /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; python -I - <<'"'"'PY'"'"'
 from boltz.main import cli
@@ -1079,16 +1126,36 @@ ANALYSIS_TEMPLATE = """#!/bin/bash
 
 unset PYTHONPATH PYTHONHOME PYTHONUSERBASE
 unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE
+runtime_base_default() {{
+  if [ -n "${{BOLTZ_RUNTIME_BASE:-}}" ]; then
+    printf '%s\\n' "$BOLTZ_RUNTIME_BASE"
+  elif [ -n "${{USER:-}}" ] && [ -d "/scratch-cbe/users/$USER" ] && [ -w "/scratch-cbe/users/$USER" ]; then
+    printf '/scratch-cbe/users/%s/.boltz_runtime\\n' "$USER"
+  elif [ -n "${{HOME:-}}" ] && [ -d "$HOME" ] && [ -w "$HOME" ]; then
+    printf '%s/.cache/boltz_runtime\\n' "$HOME"
+  else
+    printf '%s/boltz_runtime_%s\\n' "${{TMPDIR:-/tmp}}" "${{USER:-$(id -u)}}"
+  fi
+}}
+RUNTIME_BASE="$(runtime_base_default)"
+RUNTIME_HOME="$RUNTIME_BASE/home"
+RUNTIME_TMP="$RUNTIME_BASE/tmp"
+mkdir -p "$RUNTIME_HOME" "$RUNTIME_TMP"
 export BOLTZ_APPTAINER_IMAGE="${{BOLTZ_ANALYSIS_APPTAINER_IMAGE:-__ANALYSIS_IMAGE__}}"
 export BOLTZ_CONTAINER_SITEPKGS="${{BOLTZ_CONTAINER_SITEPKGS:-__SITEPKGS__}}"
 export APPTAINERENV_PYTHONNOUSERSITE=1
+export APPTAINERENV_TMPDIR="$RUNTIME_TMP"
+export APPTAINERENV_TMP="$RUNTIME_TMP"
+export APPTAINERENV_TEMP="$RUNTIME_TMP"
 if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS"
 fi
 
 apptainer exec --cleanenv --no-mount hostfs \\
+  --home "$RUNTIME_HOME" \\
   --bind "{wrapper_dir}:{wrapper_dir}" \\
   --bind "{root}:{root}" \\
+  --bind "$RUNTIME_TMP:$RUNTIME_TMP" \\
   "$BOLTZ_APPTAINER_IMAGE" \\
   /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec python -I "$@"' \\
   _ {wrapper_dir}/boltz_analysis.py {root} --no-labels {chain_flag}

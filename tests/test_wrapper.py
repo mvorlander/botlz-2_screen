@@ -109,10 +109,16 @@ def test_analysis_dependency_and_retry_logic_present(wrapper_mod):
     assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in wrapper_mod.ARRAY_TEMPLATE
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in wrapper_mod.ARRAY_TEMPLATE
     assert 'export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS"' in wrapper_mod.ARRAY_TEMPLATE
+    assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in wrapper_mod.ARRAY_TEMPLATE
+    assert '--home "$RUNTIME_HOME"' in wrapper_mod.ARRAY_TEMPLATE
+    assert '--bind "$OUTDIR:$OUTDIR"' in wrapper_mod.ARRAY_TEMPLATE
+    assert '--no-mount hostfs --nv' in wrapper_mod.ARRAY_TEMPLATE
     assert '${PYTHONPATH:+:$PYTHONPATH}' not in wrapper_mod.ARRAY_TEMPLATE
     assert 'python -I - <<' in wrapper_mod.ARRAY_TEMPLATE
     assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in wrapper_mod.ANALYSIS_TEMPLATE
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert '--home "$RUNTIME_HOME"' in wrapper_mod.ANALYSIS_TEMPLATE
     assert '${PYTHONPATH:+:$PYTHONPATH}' not in wrapper_mod.ANALYSIS_TEMPLATE
 
 
@@ -131,15 +137,24 @@ def test_shell_wrappers_default_to_current_image():
     assert 'PREP_IMAGE="${BOLTZ_PREPARE_IMAGE:-$DEFAULT_IMAGE}"' in screen_text
     assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in screen_text
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in screen_text
+    assert 'runtime_base_default()' in screen_text
+    assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in screen_text
+    assert '--home "$RUNTIME_HOME"' in screen_text
     assert 'exec python -I "$@"' in screen_text
     assert 'DEFAULT_IMAGE="$ROOT_DIR/containers/current"' in fetch_text
     assert 'PREP_IMAGE="${BOLTZ_PREPARE_IMAGE:-$DEFAULT_IMAGE}"' in fetch_text
     assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in fetch_text
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in fetch_text
+    assert 'runtime_base_default()' in fetch_text
+    assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in fetch_text
+    assert '--home "$RUNTIME_HOME"' in fetch_text
     assert 'exec python -I "$@"' in fetch_text
     assert 'ANALYSIS_IMAGE="${BOLTZ_ANALYSIS_APPTAINER_IMAGE:-${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}}"' in analysis_text
     assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in analysis_text
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in analysis_text
+    assert 'runtime_base_default()' in analysis_text
+    assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in analysis_text
+    assert '--home "$RUNTIME_HOME"' in analysis_text
     assert 'exec python -I "$@"' in analysis_text
     assert '${PYTHONPATH:+:$PYTHONPATH}' not in analysis_text
 
