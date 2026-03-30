@@ -100,12 +100,20 @@ def test_analysis_dependency_and_retry_logic_present(wrapper_mod):
     assert "BOLTZ_ANALYSIS_APPTAINER_IMAGE" in wrapper_mod.ANALYSIS_TEMPLATE
     assert "--no-mount hostfs" in wrapper_mod.ANALYSIS_TEMPLATE
     assert '/bin/bash --noprofile --norc -lc' in wrapper_mod.ANALYSIS_TEMPLATE
-    assert 'export PATH="__BIN_DIR__:$PATH"; exec python "$@"' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert 'export PATH="__BIN_DIR__:$PATH"; exec python -I "$@"' in wrapper_mod.ANALYSIS_TEMPLATE
     assert "__BIN_DIR__" in wrapper_mod.ANALYSIS_TEMPLATE
     assert "[requeue] transient runtime failure before prediction" in wrapper_mod.ARRAY_TEMPLATE
     assert "from boltz.main import cli" in wrapper_mod.ARRAY_TEMPLATE
     assert "ExcNodeList" in wrapper_mod.ARRAY_TEMPLATE
     assert "#SBATCH --requeue" in wrapper_mod.ARRAY_TEMPLATE
+    assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in wrapper_mod.ARRAY_TEMPLATE
+    assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in wrapper_mod.ARRAY_TEMPLATE
+    assert 'export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS"' in wrapper_mod.ARRAY_TEMPLATE
+    assert '${PYTHONPATH:+:$PYTHONPATH}' not in wrapper_mod.ARRAY_TEMPLATE
+    assert 'python -I - <<' in wrapper_mod.ARRAY_TEMPLATE
+    assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert '${PYTHONPATH:+:$PYTHONPATH}' not in wrapper_mod.ANALYSIS_TEMPLATE
 
 
 def test_container_defaults_point_at_current_image(wrapper_mod):
@@ -121,12 +129,40 @@ def test_shell_wrappers_default_to_current_image():
 
     assert 'DEFAULT_IMAGE="$ROOT_DIR/containers/current"' in screen_text
     assert 'PREP_IMAGE="${BOLTZ_PREPARE_IMAGE:-$DEFAULT_IMAGE}"' in screen_text
-    assert 'exec python "$@"' in screen_text
+    assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in screen_text
+    assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in screen_text
+    assert 'exec python -I "$@"' in screen_text
     assert 'DEFAULT_IMAGE="$ROOT_DIR/containers/current"' in fetch_text
     assert 'PREP_IMAGE="${BOLTZ_PREPARE_IMAGE:-$DEFAULT_IMAGE}"' in fetch_text
-    assert 'exec python "$@"' in fetch_text
+    assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in fetch_text
+    assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in fetch_text
+    assert 'exec python -I "$@"' in fetch_text
     assert 'ANALYSIS_IMAGE="${BOLTZ_ANALYSIS_APPTAINER_IMAGE:-${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}}"' in analysis_text
-    assert 'exec python "$@"' in analysis_text
+    assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in analysis_text
+    assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in analysis_text
+    assert 'exec python -I "$@"' in analysis_text
+    assert '${PYTHONPATH:+:$PYTHONPATH}' not in analysis_text
+
+
+def test_apptainer_env_strips_host_python_settings(tmp_path, monkeypatch, wrapper_mod):
+    monkeypatch.setattr(wrapper_mod, "CONTAINER_SITEPKGS", tmp_path / "sitepkgs")
+    wrapper_mod.CONTAINER_SITEPKGS.mkdir()
+    monkeypatch.setenv("PYTHONPATH", "/tmp/user/python")
+    monkeypatch.setenv("PYTHONHOME", "/tmp/user/home")
+    monkeypatch.setenv("PYTHONUSERBASE", "/tmp/user/base")
+    monkeypatch.setenv("APPTAINERENV_PYTHONPATH", "/tmp/apptainer/python")
+    monkeypatch.setenv("APPTAINERENV_PYTHONHOME", "/tmp/apptainer/home")
+    monkeypatch.setenv("APPTAINERENV_PYTHONUSERBASE", "/tmp/apptainer/base")
+
+    env = wrapper_mod._apptainer_env()
+
+    assert env["APPTAINERENV_PYTHONPATH"] == str(wrapper_mod.CONTAINER_SITEPKGS)
+    assert env["APPTAINERENV_PYTHONNOUSERSITE"] == "1"
+    assert "PYTHONPATH" not in env
+    assert "PYTHONHOME" not in env
+    assert "PYTHONUSERBASE" not in env
+    assert "APPTAINERENV_PYTHONHOME" not in env
+    assert "APPTAINERENV_PYTHONUSERBASE" not in env
 
 
 def test_parse_list_and_assert_token_validation(tmp_path, wrapper_mod):

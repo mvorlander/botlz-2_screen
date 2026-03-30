@@ -189,14 +189,20 @@ def _container_pythonpath() -> str:
     parts = []
     if CONTAINER_SITEPKGS.exists():
         parts.append(str(CONTAINER_SITEPKGS))
-    current = os.environ.get("PYTHONPATH")
-    if current:
-        parts.append(current)
     return ":".join(parts)
 
 
 def _apptainer_env() -> dict[str, str]:
     env = os.environ.copy()
+    for key in (
+        "PYTHONPATH",
+        "PYTHONHOME",
+        "PYTHONUSERBASE",
+        "APPTAINERENV_PYTHONPATH",
+        "APPTAINERENV_PYTHONHOME",
+        "APPTAINERENV_PYTHONUSERBASE",
+    ):
+        env.pop(key, None)
     pythonpath = _container_pythonpath()
     if pythonpath:
         env["APPTAINERENV_PYTHONPATH"] = pythonpath
@@ -844,6 +850,8 @@ SLURM_TEMPLATE = """#!/bin/bash
 set -euo pipefail
 export PYTORCH_MATMUL_PRECISION=medium
 export TORCH_MATMUL_ALLOW_TF32=1
+unset PYTHONPATH PYTHONHOME PYTHONUSERBASE
+unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE
 INPUT="$1"
 OUTDIR="$2"
 EXTRA="$3"
@@ -858,7 +866,7 @@ export BOLTZ_APPTAINER_IMAGE="${{BOLTZ_APPTAINER_IMAGE:-__IMAGE__}}"
 export BOLTZ_CONTAINER_SITEPKGS="${{BOLTZ_CONTAINER_SITEPKGS:-__SITEPKGS__}}"
 export APPTAINERENV_PYTHONNOUSERSITE=1
 if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
-  export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${{PYTHONPATH:+:$PYTHONPATH}}"
+  export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS"
 fi
 
 run_boltz() {{
@@ -872,7 +880,7 @@ run_boltz() {{
 preflight_runtime() {{
   apptainer exec --cleanenv --nv \\
     "$BOLTZ_APPTAINER_IMAGE" \\
-    /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; python - <<'"'"'PY'"'"'
+    /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; python -I - <<'"'"'PY'"'"'
 from boltz.main import cli
 print("runtime-ok")
 PY'
@@ -968,6 +976,8 @@ exec > "${{OUTDIR}}/slurm_${{SLURM_JOB_ID}}.out" 2>&1
 
 # Restore FLAGS placeholder
 [ "${{FLAGS}}" = "-" ] && FLAGS=""
+unset PYTHONPATH PYTHONHOME PYTHONUSERBASE
+unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE
 
 echo "[run]  $(date) on $(hostname)  — array ${{SLURM_ARRAY_TASK_ID}} / ${{SLURM_ARRAY_TASK_MAX}}"
 echo "yaml  : $YAML"
@@ -978,7 +988,7 @@ export BOLTZ_APPTAINER_IMAGE="${{BOLTZ_APPTAINER_IMAGE:-__IMAGE__}}"
 export BOLTZ_CONTAINER_SITEPKGS="${{BOLTZ_CONTAINER_SITEPKGS:-__SITEPKGS__}}"
 export APPTAINERENV_PYTHONNOUSERSITE=1
 if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
-  export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${{PYTHONPATH:+:$PYTHONPATH}}"
+  export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS"
 fi
 
 run_boltz() {{
@@ -991,7 +1001,7 @@ run_boltz() {{
 preflight_runtime() {{
   apptainer exec --cleanenv --nv \\
     "$BOLTZ_APPTAINER_IMAGE" \\
-    /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; python - <<'"'"'PY'"'"'
+    /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; python -I - <<'"'"'PY'"'"'
 from boltz.main import cli
 print("runtime-ok")
 PY'
@@ -1067,18 +1077,20 @@ ANALYSIS_TEMPLATE = """#!/bin/bash
 #SBATCH --mem=4G
 #SBATCH --dependency=afterany:{array_id}
 
+unset PYTHONPATH PYTHONHOME PYTHONUSERBASE
+unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE
 export BOLTZ_APPTAINER_IMAGE="${{BOLTZ_ANALYSIS_APPTAINER_IMAGE:-__ANALYSIS_IMAGE__}}"
 export BOLTZ_CONTAINER_SITEPKGS="${{BOLTZ_CONTAINER_SITEPKGS:-__SITEPKGS__}}"
 export APPTAINERENV_PYTHONNOUSERSITE=1
 if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
-  export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${{PYTHONPATH:+:$PYTHONPATH}}"
+  export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS"
 fi
 
 apptainer exec --cleanenv --no-mount hostfs \\
   --bind "{wrapper_dir}:{wrapper_dir}" \\
   --bind "{root}:{root}" \\
   "$BOLTZ_APPTAINER_IMAGE" \\
-  /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec python "$@"' \\
+  /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec python -I "$@"' \\
   _ {wrapper_dir}/boltz_analysis.py {root} --no-labels {chain_flag}
 """
 

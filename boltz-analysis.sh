@@ -13,10 +13,12 @@ if [ -e "$DEFAULT_IMAGE" ]; then
 fi
 ANALYSIS_IMAGE="${BOLTZ_ANALYSIS_APPTAINER_IMAGE:-${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}}"
 export BOLTZ_CONTAINER_SITEPKGS="${BOLTZ_CONTAINER_SITEPKGS:-$ROOT_DIR/sitepkgs_bundle}"
+unset PYTHONPATH PYTHONHOME PYTHONUSERBASE
+unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE
 export APPTAINERENV_PYTHONNOUSERSITE=1
 
 if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
-  export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS${PYTHONPATH:+:$PYTHONPATH}"
+  export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS"
 fi
 
 exec apptainer exec --cleanenv --no-mount hostfs \
@@ -24,5 +26,5 @@ exec apptainer exec --cleanenv --no-mount hostfs \
   --bind "$WORK_DIR:$WORK_DIR" \
   --bind "$TARGET_ROOT:$TARGET_ROOT" \
   "$ANALYSIS_IMAGE" \
-  /bin/bash --noprofile --norc -lc 'export PATH="/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin:$PATH"; exec python "$@"' \
+  /bin/bash --noprofile --norc -lc 'export PATH="/usr/local/apps/pyenv/versions/miniforge3-24.11.3-2/envs/boltz-conda/bin:$PATH"; exec python -I "$@"' \
   _ "$ROOT_DIR/boltz_analysis.py" "$@"
