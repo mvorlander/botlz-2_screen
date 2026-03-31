@@ -207,6 +207,7 @@ def _apptainer_env() -> dict[str, str]:
     if pythonpath:
         env["APPTAINERENV_PYTHONPATH"] = pythonpath
     env["APPTAINERENV_PYTHONNOUSERSITE"] = "1"
+    env["APPTAINERENV_PYTHONDONTWRITEBYTECODE"] = "1"
     return env
 
 
@@ -870,6 +871,7 @@ mkdir -p "$RUNTIME_HOME" "$RUNTIME_TMP"
 export APPTAINERENV_TMPDIR="$RUNTIME_TMP"
 export APPTAINERENV_TMP="$RUNTIME_TMP"
 export APPTAINERENV_TEMP="$RUNTIME_TMP"
+export APPTAINERENV_PYTHONDONTWRITEBYTECODE=1
 INPUT="$1"
 OUTDIR="$2"
 EXTRA="$3"
@@ -1022,6 +1024,7 @@ mkdir -p "$RUNTIME_HOME" "$RUNTIME_TMP"
 export APPTAINERENV_TMPDIR="$RUNTIME_TMP"
 export APPTAINERENV_TMP="$RUNTIME_TMP"
 export APPTAINERENV_TEMP="$RUNTIME_TMP"
+export APPTAINERENV_PYTHONDONTWRITEBYTECODE=1
 
 echo "[run]  $(date) on $(hostname)  — array ${{SLURM_ARRAY_TASK_ID}} / ${{SLURM_ARRAY_TASK_MAX}}"
 echo "yaml  : $YAML"
@@ -1149,9 +1152,43 @@ export APPTAINERENV_PYTHONNOUSERSITE=1
 export APPTAINERENV_TMPDIR="$RUNTIME_TMP"
 export APPTAINERENV_TMP="$RUNTIME_TMP"
 export APPTAINERENV_TEMP="$RUNTIME_TMP"
+export APPTAINERENV_PYTHONDONTWRITEBYTECODE=1
 if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS"
 fi
+
+preflight_runtime() {{
+  apptainer exec --cleanenv --no-mount hostfs \\
+    --home "$RUNTIME_HOME" \\
+    --bind "$RUNTIME_TMP:$RUNTIME_TMP" \\
+    "$BOLTZ_APPTAINER_IMAGE" \\
+    /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; python -I - <<'"'"'PY'"'"'
+import numpy as np
+import pandas as pd
+import plotly
+assert hasattr(np, "__version__")
+assert hasattr(np, "ndarray")
+print("runtime-ok")
+PY'
+}}
+
+PREFLIGHT_LOG=$(mktemp "$RUNTIME_TMP/analysis_preflight.${{SLURM_JOB_ID}}.XXXXXX.log")
+if ! preflight_runtime >"$PREFLIGHT_LOG" 2>&1; then
+  echo "[preflight] analysis runtime import check failed:"
+  cat "$PREFLIGHT_LOG"
+  if [ -n "${{SLURM_RESTART_COUNT:-}}" ] && [ "${{SLURM_RESTART_COUNT:-0}}" -ge 1 ]; then
+    echo "[fail] analysis preflight failed after requeue; not requeuing again."
+    rm -f "$PREFLIGHT_LOG"
+    exit 97
+  fi
+  current_host=$(hostname -s)
+  echo "[requeue] transient runtime failure before analysis; excluding $current_host and requeuing once..."
+  rm -f "$PREFLIGHT_LOG"
+  scontrol update JobId="${{SLURM_JOB_ID}}" ExcNodeList="$current_host" >/dev/null 2>&1 || true
+  scontrol requeue "${{SLURM_JOB_ID}}"
+  exit 0
+fi
+rm -f "$PREFLIGHT_LOG"
 
 apptainer exec --cleanenv --no-mount hostfs \\
   --home "$RUNTIME_HOME" \\

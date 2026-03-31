@@ -110,6 +110,7 @@ def test_analysis_dependency_and_retry_logic_present(wrapper_mod):
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in wrapper_mod.ARRAY_TEMPLATE
     assert 'export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS"' in wrapper_mod.ARRAY_TEMPLATE
     assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in wrapper_mod.ARRAY_TEMPLATE
+    assert 'export APPTAINERENV_PYTHONDONTWRITEBYTECODE=1' in wrapper_mod.ARRAY_TEMPLATE
     assert '--home "$RUNTIME_HOME"' in wrapper_mod.ARRAY_TEMPLATE
     assert 'JOB_DIR="$(dirname "$YAML")"' in wrapper_mod.ARRAY_TEMPLATE
     assert '--bind "$JOB_DIR:$JOB_DIR"' in wrapper_mod.ARRAY_TEMPLATE
@@ -119,7 +120,11 @@ def test_analysis_dependency_and_retry_logic_present(wrapper_mod):
     assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in wrapper_mod.ANALYSIS_TEMPLATE
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in wrapper_mod.ANALYSIS_TEMPLATE
     assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert 'export APPTAINERENV_PYTHONDONTWRITEBYTECODE=1' in wrapper_mod.ANALYSIS_TEMPLATE
     assert '--home "$RUNTIME_HOME"' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert '[preflight] analysis runtime import check failed:' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert '[requeue] transient runtime failure before analysis' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert 'import pandas as pd' in wrapper_mod.ANALYSIS_TEMPLATE
     assert '${PYTHONPATH:+:$PYTHONPATH}' not in wrapper_mod.ANALYSIS_TEMPLATE
 
 
@@ -140,6 +145,7 @@ def test_shell_wrappers_default_to_current_image():
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in screen_text
     assert 'runtime_base_default()' in screen_text
     assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in screen_text
+    assert 'export APPTAINERENV_PYTHONDONTWRITEBYTECODE=1' in screen_text
     assert '--home "$RUNTIME_HOME"' in screen_text
     assert 'exec python -I "$@"' in screen_text
     assert 'DEFAULT_IMAGE="$ROOT_DIR/containers/current"' in fetch_text
@@ -148,14 +154,21 @@ def test_shell_wrappers_default_to_current_image():
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in fetch_text
     assert 'runtime_base_default()' in fetch_text
     assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in fetch_text
+    assert 'export APPTAINERENV_PYTHONDONTWRITEBYTECODE=1' in fetch_text
     assert '--home "$RUNTIME_HOME"' in fetch_text
     assert 'exec python -I "$@"' in fetch_text
     assert 'ANALYSIS_IMAGE="${BOLTZ_ANALYSIS_APPTAINER_IMAGE:-${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}}"' in analysis_text
     assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in analysis_text
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in analysis_text
     assert 'runtime_base_default()' in analysis_text
+    assert 'TARGET_BIND=()' in analysis_text
+    assert '[ -n "${1:-}" ] && [ "${1#-}" = "$1" ]' in analysis_text
+    assert 'cmd=(' in analysis_text
+    assert '[ "${#TARGET_BIND[@]}" -gt 0 ]' in analysis_text
     assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in analysis_text
+    assert 'export APPTAINERENV_PYTHONDONTWRITEBYTECODE=1' in analysis_text
     assert '--home "$RUNTIME_HOME"' in analysis_text
+    assert 'cmd+=("${TARGET_BIND[@]}")' in analysis_text
     assert 'exec python -I "$@"' in analysis_text
     assert '${PYTHONPATH:+:$PYTHONPATH}' not in analysis_text
 
