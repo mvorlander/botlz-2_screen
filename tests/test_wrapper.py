@@ -144,18 +144,31 @@ def test_shell_wrappers_default_to_current_image():
     assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in screen_text
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in screen_text
     assert 'runtime_base_default()' in screen_text
+    assert 'declare -a EXTRA_BINDS=()' in screen_text
+    assert 'declare -A EXTRA_BIND_SEEN=()' in screen_text
+    assert 'add_bind_target()' in screen_text
+    assert 'add_bind_value()' in screen_text
+    assert '--screen|--bait|-c|--chain-names|--out|-o|--msa|-m' in screen_text
+    assert 'if [ "${#EXTRA_BINDS[@]}" -gt 0 ]' in screen_text
     assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in screen_text
     assert 'export APPTAINERENV_PYTHONDONTWRITEBYTECODE=1' in screen_text
     assert '--home "$RUNTIME_HOME"' in screen_text
+    assert 'cmd+=("${EXTRA_BINDS[@]}")' in screen_text
     assert 'exec python -I "$@"' in screen_text
     assert 'DEFAULT_IMAGE="$ROOT_DIR/containers/current"' in fetch_text
     assert 'PREP_IMAGE="${BOLTZ_PREPARE_IMAGE:-$DEFAULT_IMAGE}"' in fetch_text
     assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in fetch_text
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in fetch_text
     assert 'runtime_base_default()' in fetch_text
+    assert 'declare -a EXTRA_BINDS=()' in fetch_text
+    assert 'declare -A EXTRA_BIND_SEEN=()' in fetch_text
+    assert 'add_bind_target()' in fetch_text
+    assert '-f|--file|-o|--output|--boltz-output' in fetch_text
+    assert 'if [ "${#EXTRA_BINDS[@]}" -gt 0 ]' in fetch_text
     assert 'export APPTAINERENV_TMPDIR="$RUNTIME_TMP"' in fetch_text
     assert 'export APPTAINERENV_PYTHONDONTWRITEBYTECODE=1' in fetch_text
     assert '--home "$RUNTIME_HOME"' in fetch_text
+    assert 'cmd+=("${EXTRA_BINDS[@]}")' in fetch_text
     assert 'exec python -I "$@"' in fetch_text
     assert 'ANALYSIS_IMAGE="${BOLTZ_ANALYSIS_APPTAINER_IMAGE:-${BOLTZ_APPTAINER_IMAGE:-$DEFAULT_IMAGE}}"' in analysis_text
     assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in analysis_text
