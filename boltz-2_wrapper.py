@@ -913,6 +913,21 @@ print("runtime-ok")
 PY'
 }}
 
+append_excluded_host() {{
+  local host="$1"
+  local current new_list
+  current=$(scontrol show job "${{SLURM_JOB_ID}}" 2>/dev/null | tr ' ' '\\n' | awk -F= '/^ExcNodeList=/{{print $2; exit}}')
+  if [ -n "$current" ] && [ "$current" != "(null)" ] && [ "$current" != "NONE" ]; then
+    case ",$current," in
+      *",$host,"*) new_list="$current" ;;
+      *) new_list="$current,$host" ;;
+    esac
+  else
+    new_list="$host"
+  fi
+  scontrol update JobId="${{SLURM_JOB_ID}}" ExcNodeList="$new_list" >/dev/null 2>&1 || true
+}}
+
 run_boltz_logged() {{
   local attempt_log="$1"
   set +e
@@ -1074,15 +1089,17 @@ while true; do
   if ! preflight_runtime >"$PREFLIGHT_LOG" 2>&1; then
     echo "[preflight] runtime import check failed:"
     cat "$PREFLIGHT_LOG"
-    if [ -n "${{SLURM_RESTART_COUNT:-}}" ] && [ "${{SLURM_RESTART_COUNT:-0}}" -ge 1 ]; then
-      echo "[fail] preflight failed after requeue; not requeuing again."
+    restart_count="${{SLURM_RESTART_COUNT:-0}}"
+    max_requeues="${{BOLTZ_MAX_TRANSIENT_REQUEUES:-3}}"
+    if [ "$restart_count" -ge "$max_requeues" ]; then
+      echo "[fail] preflight failed after $restart_count requeue(s); not requeuing again."
       rm -f "$PREFLIGHT_LOG"
       exit 97
     fi
     current_host=$(hostname -s)
-    echo "[requeue] transient runtime failure before prediction; excluding $current_host and requeuing task once..."
+    echo "[requeue] transient runtime failure before prediction; excluding $current_host and requeuing task ($((restart_count + 1))/$max_requeues)..."
     rm -f "$PREFLIGHT_LOG"
-    scontrol update JobId="${{SLURM_JOB_ID}}" ExcNodeList="$current_host" >/dev/null 2>&1 || true
+    append_excluded_host "$current_host"
     scontrol requeue "${{SLURM_JOB_ID}}"
     exit 0
   fi
@@ -1156,6 +1173,20 @@ export APPTAINERENV_PYTHONDONTWRITEBYTECODE=1
 if [ -d "$BOLTZ_CONTAINER_SITEPKGS" ]; then
   export APPTAINERENV_PYTHONPATH="$BOLTZ_CONTAINER_SITEPKGS"
 fi
+CHAIN_MAP_PATH="{chain_map_path}"
+CHAIN_MAP_BIND=()
+if [ -n "$CHAIN_MAP_PATH" ]; then
+  if [ -d "$CHAIN_MAP_PATH" ]; then
+    CHAIN_MAP_PATH="$(cd "$CHAIN_MAP_PATH" && pwd -P)"
+    CHAIN_MAP_BIND=(--bind "$CHAIN_MAP_PATH:$CHAIN_MAP_PATH")
+  elif [ -e "$CHAIN_MAP_PATH" ]; then
+    CHAIN_MAP_PATH="$(cd "$(dirname "$CHAIN_MAP_PATH")" && pwd -P)/$(basename "$CHAIN_MAP_PATH")"
+    CHAIN_MAP_BIND=(--bind "$(dirname "$CHAIN_MAP_PATH"):$(dirname "$CHAIN_MAP_PATH")")
+  elif [[ "$CHAIN_MAP_PATH" != /* ]]; then
+    CHAIN_MAP_PATH="{root}/$CHAIN_MAP_PATH"
+    CHAIN_MAP_BIND=(--bind "$(dirname "$CHAIN_MAP_PATH"):$(dirname "$CHAIN_MAP_PATH")")
+  fi
+fi
 
 preflight_runtime() {{
   apptainer exec --cleanenv --no-mount hostfs \\
@@ -1172,32 +1203,63 @@ print("runtime-ok")
 PY'
 }}
 
+append_excluded_host() {{
+  local host="$1"
+  local current new_list
+  current=$(scontrol show job "${{SLURM_JOB_ID}}" 2>/dev/null | tr ' ' '\\n' | awk -F= '/^ExcNodeList=/{{print $2; exit}}')
+  if [ -n "$current" ] && [ "$current" != "(null)" ] && [ "$current" != "NONE" ]; then
+    case ",$current," in
+      *",$host,"*) new_list="$current" ;;
+      *) new_list="$current,$host" ;;
+    esac
+  else
+    new_list="$host"
+  fi
+  scontrol update JobId="${{SLURM_JOB_ID}}" ExcNodeList="$new_list" >/dev/null 2>&1 || true
+}}
+
 PREFLIGHT_LOG=$(mktemp "$RUNTIME_TMP/analysis_preflight.${{SLURM_JOB_ID}}.XXXXXX.log")
 if ! preflight_runtime >"$PREFLIGHT_LOG" 2>&1; then
   echo "[preflight] analysis runtime import check failed:"
   cat "$PREFLIGHT_LOG"
-  if [ -n "${{SLURM_RESTART_COUNT:-}}" ] && [ "${{SLURM_RESTART_COUNT:-0}}" -ge 1 ]; then
-    echo "[fail] analysis preflight failed after requeue; not requeuing again."
+  restart_count="${{SLURM_RESTART_COUNT:-0}}"
+  max_requeues="${{BOLTZ_MAX_TRANSIENT_REQUEUES:-3}}"
+  if [ "$restart_count" -ge "$max_requeues" ]; then
+    echo "[fail] analysis preflight failed after $restart_count requeue(s); not requeuing again."
     rm -f "$PREFLIGHT_LOG"
     exit 97
   fi
   current_host=$(hostname -s)
-  echo "[requeue] transient runtime failure before analysis; excluding $current_host and requeuing once..."
+  echo "[requeue] transient runtime failure before analysis; excluding $current_host and requeuing ($((restart_count + 1))/$max_requeues)..."
   rm -f "$PREFLIGHT_LOG"
-  scontrol update JobId="${{SLURM_JOB_ID}}" ExcNodeList="$current_host" >/dev/null 2>&1 || true
+  append_excluded_host "$current_host"
   scontrol requeue "${{SLURM_JOB_ID}}"
   exit 0
 fi
 rm -f "$PREFLIGHT_LOG"
 
-apptainer exec --cleanenv --no-mount hostfs \\
-  --home "$RUNTIME_HOME" \\
-  --bind "{wrapper_dir}:{wrapper_dir}" \\
-  --bind "{root}:{root}" \\
-  --bind "$RUNTIME_TMP:$RUNTIME_TMP" \\
-  "$BOLTZ_APPTAINER_IMAGE" \\
-  /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec python -I "$@"' \\
-  _ {wrapper_dir}/boltz_analysis.py {root} --no-labels {chain_flag}
+cmd=(
+  apptainer exec --cleanenv --no-mount hostfs
+  --home "$RUNTIME_HOME"
+  --bind "{wrapper_dir}:{wrapper_dir}"
+  --bind "{root}:{root}"
+)
+if [ "${{#CHAIN_MAP_BIND[@]}}" -gt 0 ]; then
+  cmd+=("${{CHAIN_MAP_BIND[@]}}")
+fi
+cmd+=(
+  --bind "$RUNTIME_TMP:$RUNTIME_TMP"
+  "$BOLTZ_APPTAINER_IMAGE"
+  /bin/bash --noprofile --norc -lc 'export PATH="__BIN_DIR__:$PATH"; exec python -I "$@"'
+  _
+  {wrapper_dir}/boltz_analysis.py
+  {root}
+  --no-labels
+)
+if [ -n "$CHAIN_MAP_PATH" ]; then
+  cmd+=(--chain-map "$CHAIN_MAP_PATH")
+fi
+"${{cmd[@]}}"
 """
 
 def write_slurm(job: str, yaml_path: pathlib.Path, outdir: pathlib.Path, flags: str, mem_req: str, part: str, constraint: str) -> pathlib.Path:
@@ -1490,13 +1552,20 @@ def main():
             .replace("__BIN_DIR__", CONTAINER_BIN_DIR))
 
         analysis_slurm = root_out / "analysis.slurm"
-        chain_flag = f"--chain-map {args.chain_map}" if args.chain_map else ""
+        chain_map_arg = pathlib.Path(args.chain_map).expanduser() if args.chain_map else None
+        if chain_map_arg:
+            chain_map_render = str(chain_map_arg.resolve()) if chain_map_arg.exists() else str(chain_map_arg)
+            chain_flag = f"--chain-map {shlex.quote(chain_map_render)}"
+        else:
+            chain_map_render = ""
+            chain_flag = ""
         ana_script = ANALYSIS_TEMPLATE.format(
             root=str(root_out),
             job_name=job_name,
             array_id="__ARRAY_ID__",
             wrapper_dir=WRAPPER_DIR,
-            chain_flag=chain_flag
+            chain_flag=chain_flag,
+            chain_map_path=chain_map_render
         )
         ana_script = ana_script.replace("__IMAGE__", str(CONTAINER_IMAGE))
         ana_script = ana_script.replace("__ANALYSIS_IMAGE__", str(ANALYSIS_CONTAINER_IMAGE))

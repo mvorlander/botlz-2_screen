@@ -105,6 +105,10 @@ def test_analysis_dependency_and_retry_logic_present(wrapper_mod):
     assert "[requeue] transient runtime failure before prediction" in wrapper_mod.ARRAY_TEMPLATE
     assert "from boltz.main import cli" in wrapper_mod.ARRAY_TEMPLATE
     assert "ExcNodeList" in wrapper_mod.ARRAY_TEMPLATE
+    assert "append_excluded_host()" in wrapper_mod.ARRAY_TEMPLATE
+    assert "BOLTZ_MAX_TRANSIENT_REQUEUES:-3" in wrapper_mod.ARRAY_TEMPLATE
+    assert 'append_excluded_host "$current_host"' in wrapper_mod.ARRAY_TEMPLATE
+    assert "preflight failed after $restart_count requeue(s)" in wrapper_mod.ARRAY_TEMPLATE
     assert "#SBATCH --requeue" in wrapper_mod.ARRAY_TEMPLATE
     assert 'unset PYTHONPATH PYTHONHOME PYTHONUSERBASE' in wrapper_mod.ARRAY_TEMPLATE
     assert 'unset APPTAINERENV_PYTHONPATH APPTAINERENV_PYTHONHOME APPTAINERENV_PYTHONUSERBASE' in wrapper_mod.ARRAY_TEMPLATE
@@ -124,6 +128,10 @@ def test_analysis_dependency_and_retry_logic_present(wrapper_mod):
     assert '--home "$RUNTIME_HOME"' in wrapper_mod.ANALYSIS_TEMPLATE
     assert '[preflight] analysis runtime import check failed:' in wrapper_mod.ANALYSIS_TEMPLATE
     assert '[requeue] transient runtime failure before analysis' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert "append_excluded_host()" in wrapper_mod.ANALYSIS_TEMPLATE
+    assert "BOLTZ_MAX_TRANSIENT_REQUEUES:-3" in wrapper_mod.ANALYSIS_TEMPLATE
+    assert 'append_excluded_host "$current_host"' in wrapper_mod.ANALYSIS_TEMPLATE
+    assert "analysis preflight failed after $restart_count requeue(s)" in wrapper_mod.ANALYSIS_TEMPLATE
     assert 'import pandas as pd' in wrapper_mod.ANALYSIS_TEMPLATE
     assert '${PYTHONPATH:+:$PYTHONPATH}' not in wrapper_mod.ANALYSIS_TEMPLATE
 
